@@ -42,8 +42,8 @@
 
             <button id="floatingDupBtn" onclick="duplicateSelected(event)">Duplicate Selected Record</button>
 
-            <div class="flex-container" style="margin-bottom: 20px;">
-                <div class="card">
+            <div class="flex-container" id="topFlexRow" style="margin-bottom: 20px;">
+                <div class="card" id="setupCard">
                     <label id="setupHeaderLabel">1. Employee & Branch Setup<span class="tooltip-icon">i<span
                                 class="tooltip-text">Create a new employee profile/branch to record metrics, or select
                                 from an existing one previously saved.</span></span></label>
@@ -57,7 +57,7 @@
                     <input type="text" id="branchName" placeholder="Type Branch Name" style="margin-top:8px;">
                 </div>
 
-                <div class="card bulk-card">
+                <div class="card bulk-card" id="bulkCard">
                     <label>⚡ Global Profile Updates<span class="tooltip-icon">i<span class="tooltip-text">Mass-update
                                 the branch or hourly rate for all previous historical shifts
                                 simultaneously.</span></span></label>
@@ -81,7 +81,7 @@
                 </div>
             </div>
 
-            <div class="flex-container">
+            <div class="flex-container" id="botFlexRow">
                 <div class="card" style="flex: 1.2;" id="pdfCard">
                     <div class="pdf-controls">
                         <label>Punch Card (PDF/Image OCR View)<span class="tooltip-icon">i<span

@@ -74,6 +74,26 @@ function applySettings() {
     document.getElementById("pdfCard").style.display = appSettings.showPdf ? "" : "none";
     document.getElementById("csvCard").style.display = appSettings.showCsv ? "" : "none";
 
+    const topRow = document.getElementById("topFlexRow");
+    const botRow = document.getElementById("botFlexRow");
+    const setupCard = document.getElementById("setupCard");
+    const bulkCard = document.getElementById("bulkCard");
+    const csvCard = document.getElementById("csvCard");
+    const pdfCard = document.getElementById("pdfCard");
+    const entryCard = document.getElementById("entryCard");
+
+    if (!appSettings.showPdf && !appSettings.showCsv) {
+        topRow.appendChild(setupCard);
+        botRow.appendChild(entryCard);
+        botRow.appendChild(bulkCard);
+    } else {
+        topRow.appendChild(setupCard);
+        topRow.appendChild(bulkCard);
+        topRow.appendChild(csvCard);
+        botRow.appendChild(pdfCard);
+        botRow.appendChild(entryCard);
+    }
+
     document.getElementById("toggleBranch").checked = appSettings.showBranch;
     document.getElementById("toggleSummary").checked = appSettings.showSummary;
     document.getElementById("togglePdf").checked = appSettings.showPdf;

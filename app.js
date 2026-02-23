@@ -317,6 +317,18 @@ window.renderAll = function () {
         let ent = masterData.filter(x => x.name === n); let h = ent.reduce((s, c) => s + c.total, 0), p = ent.reduce((s, c) => s + parseFloat(c.pay), 0);
         summaryBody.innerHTML += `<tr style="background:#e8f5e9; font-weight:bold;"><td>${n}</td><td>${ent[0].branch}</td><td>${decToT(h)}</td><td>$${p.toFixed(2)}</td><td><button class="btn-danger-x" onclick="deleteEmployeeBulk('${n}')">Clear All</button></td></tr>`;
     });
+
+    const finalBranchFilter = document.getElementById("branchFilter").value;
+    const clearBtn = document.getElementById("btnClearDatabase");
+    if (clearBtn) {
+        if (finalBranchFilter === "ALL" || !finalBranchFilter) {
+            clearBtn.innerText = "Clear Database";
+            clearBtn.onclick = clearAllTablesSecure;
+        } else {
+            clearBtn.innerText = "Clear Branch";
+            clearBtn.onclick = function () { clearBranchSecure(finalBranchFilter); };
+        }
+    }
 };
 
 window.checkExistingShifts = function () {
@@ -366,6 +378,19 @@ window.updateNameFromDropdown = function () { const s = document.getElementById(
 window.updateBranchFromDropdown = function () { const s = document.getElementById("branchSelectDropdown"); if (s.value !== "") { document.getElementById("branchName").value = s.value; renderAll(); } };
 window.deleteEntry = function (id) { if (confirm("Delete day?")) { masterData = masterData.filter(e => e.id !== id); localStorage.setItem("payroll_v20", JSON.stringify(masterData)); renderAll(); } };
 window.deleteEmployeeBulk = function (n) { if (confirm("Clear history for " + n + "?")) { masterData = masterData.filter(e => e.name !== n); localStorage.setItem("payroll_v20", JSON.stringify(masterData)); renderAll(); } };
+window.clearBranchSecure = function (branch) {
+    const p = prompt("Security PIN:");
+    if (p === appSettings.securityPin) {
+        if (confirm(`Permanently wipe all records for branch: ${branch}?`)) {
+            masterData = masterData.filter(e => e.branch !== branch);
+            localStorage.setItem("payroll_v20", JSON.stringify(masterData));
+            renderAll();
+        }
+    } else if (p) {
+        alert("Incorrect PIN.");
+    }
+};
+
 window.clearAllTablesSecure = function () {
     const p = prompt("Security PIN:");
     if (p === appSettings.securityPin) {

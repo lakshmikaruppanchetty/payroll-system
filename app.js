@@ -249,6 +249,7 @@ window.importCSV = function () {
             }
             localStorage.setItem("payroll_v20", JSON.stringify(masterData)); renderAll(); alert(`Synced: ${aC} new, ${uC} updated.`);
         } catch (e) { alert("Format Error."); }
+        fileInput.value = '';
     }; reader.readAsText(fileInput.files[0]);
 };
 
@@ -568,14 +569,15 @@ window.previewPDF = async function () {
 
             const textContent = await page.getTextContent();
             const textStr = textContent.items.map(s => s.str).join(' ');
-            let matches = parseTimes(textStr);
+            let parsed = parseTimesAndDate(textStr);
 
-            if (matches.length >= 2) applyAutofill(matches);
+            if (parsed.times.length >= 2 || parsed.dateStr) applyAutofill(parsed.times, parsed.dateStr);
             else if (appSettings.ocrEngine === 'openai' || appSettings.ocrEngine === 'llm') callOpenAI(canvas);
             else if (appSettings.ocrEngine === 'gemini') callGemini(canvas);
             else runOCR(canvas);
         };
         reader.readAsArrayBuffer(f);
+        document.getElementById('pdfUpload').value = '';
     } else if (f.type.startsWith('image/')) {
         const reader = new FileReader();
         reader.onload = function (e) {
@@ -601,42 +603,53 @@ window.previewPDF = async function () {
             img.src = e.target.result;
         };
         reader.readAsDataURL(f);
+        document.getElementById('pdfUpload').value = '';
     } else {
         document.getElementById('pdfViewer').innerHTML = "<p style='color:red; text-align:center; padding-top: 200px;'>Unsupported file type.</p>";
+        document.getElementById('pdfUpload').value = '';
     }
 };
 
-function parseTimes(text) {
+function parseTimesAndDate(text) {
     let cleanedText = text.replace(/[l\|I]/g, '1').replace(/[oO]/g, '0').replace(/[sS]/g, '5');
     console.log("OCR Extracted Text:", cleanedText);
 
     const timeRegex = /\b(1[0-2]|0?[1-9]|2[0-3])[\s:;.,_\-]*([0-5][0-9])\s*([aA][mM]?|[pP][mM]?)?\b/gi;
     let matched = [...cleanedText.matchAll(timeRegex)];
 
-    return matched.map(m => {
-        let h = m[1];
-        let min = m[2];
-        let suffix = m[3] ? m[3].toLowerCase() : '';
-
-        let isPM = suffix.startsWith('p');
-        let isAM = suffix.startsWith('a');
-
+    let times = matched.map(m => {
+        let h = m[1], min = m[2], suffix = m[3] ? m[3].toLowerCase() : '';
+        let isPM = suffix.startsWith('p'), isAM = suffix.startsWith('a');
         let hNum = parseInt(h, 10);
         if (isPM && hNum < 12) hNum += 12;
         if (isAM && hNum === 12) hNum = 0;
         return `${hNum.toString().padStart(2, '0')}:${min.padStart(2, '0')}`;
     }).filter(x => x);
+
+    let dateRegex = /\b(0?[1-9]|1[0-2])[\/\-](0?[1-9]|[12]\d|3[01])[\/\-](20\d{2}|\d{2})\b/;
+    let dateMatch = cleanedText.match(dateRegex);
+    let dateStr = null;
+    if (dateMatch) {
+        let y = dateMatch[3].length === 2 ? '20' + dateMatch[3] : dateMatch[3];
+        dateStr = `${y}-${dateMatch[1].padStart(2, '0')}-${dateMatch[2].padStart(2, '0')}`;
+    }
+
+    return { times, dateStr };
 }
 
-function applyAutofill(matches) {
+function applyAutofill(matches, dateStr) {
     let f = document.getElementById("clockToggle").value;
     if (f !== "24") { document.getElementById("clockToggle").value = "24"; window.toggleClockFormat(); }
 
-    if (matches[0] && matches[1]) { document.getElementById("s1start").value = matches[0].padStart(5, '0'); document.getElementById("s1end").value = matches[1].padStart(5, '0'); }
-    if (matches[2] && matches[3]) { document.getElementById("s2start").value = matches[2].padStart(5, '0'); document.getElementById("s2end").value = matches[3].padStart(5, '0'); }
-    if (matches[4] && matches[5]) { document.getElementById("s3start").value = matches[4].padStart(5, '0'); document.getElementById("s3end").value = matches[5].padStart(5, '0'); }
+    if (dateStr) {
+        document.getElementById("workDate").value = dateStr;
+    }
 
-    alert("⚠️ AI Auto-Fill Complete!\n\nWe successfully detected shift timings from the document.\n\nPlease CAREFULLY verify that the populated start and end times are perfectly accurate before saving!");
+    ["s1start", "s1end", "s2start", "s2end", "s3start", "s3end"].forEach((id, i) => {
+        if (matches[i]) document.getElementById(id).value = matches[i].padStart(5, '0');
+    });
+
+    alert("⚠️ AI Auto-Fill Complete!\n\nWe successfully detected data from the document.\n\nPlease CAREFULLY verify that the populated values are perfectly accurate before saving!");
 }
 
 async function runOCR(canvas) {
@@ -645,9 +658,9 @@ async function runOCR(canvas) {
         const result = await Tesseract.recognize(canvas, 'eng');
         document.getElementById('ocrToast')?.remove();
         let rawText = result.data.text;
-        let matches = parseTimes(rawText);
-        if (matches.length >= 2) {
-            applyAutofill(matches);
+        let parsed = parseTimesAndDate(rawText);
+        if (parsed.times.length >= 2 || parsed.dateStr) {
+            applyAutofill(parsed.times, parsed.dateStr);
         } else {
             alert("Could not detect clear shift timings from the document. Please enter manually.");
         }
@@ -671,7 +684,7 @@ async function callOpenAI(canvas) {
                 messages: [{
                     role: "user",
                     content: [
-                        { type: "text", text: "Read this handwritten timesheet. Extract the chronological start and end times for up to 3 shifts. Return ONLY a JSON array of 6 strings representing start/end times in 24-hour 'HH:MM' format. Example: ['09:00', '13:00', '14:00', '18:00', '', '']. If fewer times exist, return empty strings for the remainder. Output nothing else." },
+                        { type: "text", text: "Read this handwritten timesheet. Extract the shift date and chronological start and end times for up to 3 shifts. Return ONLY a JSON object with two keys: 'date' (YYYY-MM-DD format, or null) and 'times' (Array of 6 strings representing start/end times in 24-hour 'HH:MM' format. Example: [\"09:00\", \"13:00\", \"14:00\", \"18:00\", \"\", \"\"]). Output nothing else, no markdown formatting." },
                         { type: "image_url", image_url: { url: `data:image/jpeg;base64,${base64Image}` } }
                     ]
                 }],
@@ -685,10 +698,12 @@ async function callOpenAI(canvas) {
         if (data.error) return alert("LLM API Error: " + data.error.message);
 
         let content = data.choices[0].message.content.trim().replace(/```json/g, '').replace(/```/g, '').trim();
-        let timesArray = JSON.parse(content);
+        let parsed = JSON.parse(content);
+        let timesArray = parsed.times || [];
+        let dateStr = parsed.date || null;
         let validMatches = timesArray.filter(t => t && t.length >= 4);
 
-        if (validMatches.length >= 2) applyAutofill(validMatches);
+        if (validMatches.length >= 2 || dateStr) applyAutofill(timesArray, dateStr);
         else alert("LLM could not confidently detect clear shift timings. Please enter manually.");
 
     } catch (e) {
@@ -710,7 +725,7 @@ async function callGemini(canvas) {
             body: JSON.stringify({
                 contents: [{
                     parts: [
-                        { text: "Read this handwritten timesheet. Extract the chronological start and end times for up to 3 shifts. Return ONLY a JSON array of 6 strings representing start/end times in 24-hour 'HH:MM' format. Example: [\"09:00\", \"13:00\", \"14:00\", \"18:00\", \"\", \"\"]. If fewer times exist, return empty strings for the remainder. Output nothing else, no markdown formatting." },
+                        { text: "Read this handwritten timesheet. Extract the shift date and chronological start and end times for up to 3 shifts. Return ONLY a JSON object with two keys: 'date' (YYYY-MM-DD format, or null) and 'times' (Array of 6 strings representing start/end times in 24-hour 'HH:MM' format. Example: [\"09:00\", \"13:00\", \"14:00\", \"18:00\", \"\", \"\"]). Output nothing else, no markdown formatting." },
                         { inline_data: { mime_type: "image/jpeg", data: base64Image } }
                     ]
                 }]
@@ -723,10 +738,12 @@ async function callGemini(canvas) {
         if (data.error) return alert("Gemini API Error: " + data.error.message);
 
         let content = data.candidates[0].content.parts[0].text.trim().replace(/```json/g, '').replace(/```/g, '').trim();
-        let timesArray = JSON.parse(content);
+        let parsed = JSON.parse(content);
+        let timesArray = parsed.times || [];
+        let dateStr = parsed.date || null;
         let validMatches = timesArray.filter(t => t && t.length >= 4);
 
-        if (validMatches.length >= 2) applyAutofill(validMatches);
+        if (validMatches.length >= 2 || dateStr) applyAutofill(timesArray, dateStr);
         else alert("Gemini could not confidently detect clear shift timings. Please enter manually.");
 
     } catch (e) {

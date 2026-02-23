@@ -201,7 +201,7 @@ window.renderAll = function () {
     eS.style.display = emps.length <= 1 ? "none" : "";
     eS.innerHTML = '<option value="">-- Select Employee --</option>';
     document.getElementById("viewFilter").innerHTML = emps.length > 1 || emps.length === 0 ? '<option value="ALL">All Employees</option>' : '';
-    bET.innerHTML = emps.length > 1 || emps.length === 0 ? '<option value="ALL">ALL Employees</option><option value="SELECTED">Selected Only</option>' : '<option value="SELECTED">Selected Only</option>';
+    bET.innerHTML = emps.length > 1 ? '<option value="ALL">ALL Employees</option><option value="SELECTED">Selected Only</option>' : '<option value="SELECTED">Selected Only</option>';
     if (cBET && Array.from(bET.options).some(o => o.value === cBET)) bET.value = cBET;
 
     emps.forEach(n => { eS.innerHTML += `<option value="${n}">${n}</option>`; document.getElementById("viewFilter").innerHTML += `<option value="${n}">${n}</option>`; });

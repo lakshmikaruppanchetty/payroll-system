@@ -202,21 +202,26 @@
                 <h3>AI Document Processing</h3>
                 <p style="font-size: 12px; color: #666; margin-top: 0;">Upgrade handwriting detection using an LLM
                     instead of standard OCR.</p>
-                <div class="toggle-box" style="padding-top: 5px; margin-bottom: 10px;">
-                    <label class="switch">
-                        <input type="checkbox" id="toggleLlm" onchange="saveSettings()">
-                        <span class="slider"></span>
-                    </label>
-                    <label for="toggleLlm" style="margin: 0; font-size: 14px; cursor: pointer;">Enable Premium LLM
-                        (OpenAI API)</label>
+                <div style="margin-top: 10px; margin-bottom: 15px;">
+                    <label style="font-size: 14px; display: block; margin-bottom: 5px;">Select AI Engine:</label>
+                    <select id="ocrEngineSelect" onchange="saveSettings()" style="width: 100%; padding: 6px;">
+                        <option value="free">Free Internal OCR (Tesseract)</option>
+                        <option value="openai">OpenAI (GPT-4o)</option>
+                        <option value="gemini">Google Gemini (Gemini 1.5 Flash)</option>
+                    </select>
                 </div>
-                <div id="llmApiSection" style="display:none; flex-direction: column;">
+                <div id="llmApiSection" style="display:none; flex-direction: column; margin-bottom: 10px;">
                     <label style="font-size: 12px;">OpenAI API Key</label>
                     <input type="password" id="llmApiKey" onchange="saveSettings()" placeholder="sk-..."
                         style="font-family: monospace;">
-                    <p style="font-size: 11px; color:#888; margin-top:4px; margin-bottom: 0;">Your key is stored
-                        completely locally in your browser storage.</p>
                 </div>
+                <div id="geminiApiSection" style="display:none; flex-direction: column; margin-bottom: 5px;">
+                    <label style="font-size: 12px;">Gemini API Key</label>
+                    <input type="password" id="geminiApiKey" onchange="saveSettings()" placeholder="AIza..."
+                        style="font-family: monospace;">
+                </div>
+                <p style="font-size: 11px; color:#888; margin-top:8px; margin-bottom: 0;">Your API keys are stored
+                    completely locally in your browser storage.</p>
             </div>
             <div class="card" style="max-width: 600px;">
                 <h3>Feature Toggles</h3>

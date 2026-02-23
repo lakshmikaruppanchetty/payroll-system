@@ -11,6 +11,7 @@ appSettings.maxRate = appSettings.maxRate ?? 35;
 appSettings.ocrEngine = appSettings.ocrEngine ?? 'free';
 appSettings.llmApiKey = appSettings.llmApiKey ?? '';
 appSettings.geminiApiKey = appSettings.geminiApiKey ?? '';
+appSettings.securityPin = appSettings.securityPin ?? '1234';
 let editingId = null; let selectedId = null;
 
 window.renderRates = function () {
@@ -52,6 +53,7 @@ function saveSettings() {
     appSettings.ocrEngine = document.getElementById("ocrEngineSelect").value;
     appSettings.llmApiKey = document.getElementById("llmApiKey").value;
     appSettings.geminiApiKey = document.getElementById("geminiApiKey").value;
+    appSettings.securityPin = document.getElementById("securityPinSetting").value || '1234';
     appSettings.minRate = document.getElementById("minRateSetting").value;
     appSettings.maxRate = document.getElementById("maxRateSetting").value;
     localStorage.setItem("settings_v20", JSON.stringify(appSettings));
@@ -87,6 +89,7 @@ function applySettings() {
 
     document.getElementById("llmApiKey").value = appSettings.llmApiKey || "";
     document.getElementById("geminiApiKey").value = appSettings.geminiApiKey || "";
+    document.getElementById("securityPinSetting").value = appSettings.securityPin;
     document.getElementById("minRateSetting").value = appSettings.minRate;
     document.getElementById("maxRateSetting").value = appSettings.maxRate;
 
@@ -202,7 +205,16 @@ window.importCSV = function () {
         try {
             const rows = e.target.result.split(/\r?\n/).filter(r => r.trim()); let aC = 0, uC = 0;
             for (let i = 1; i < rows.length; i++) {
-                const cols = rows[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g); if (!cols || cols.length < 5) continue;
+                const cols = [];
+                let inQuotes = false, current = "";
+                for (let j = 0; j < rows[i].length; j++) {
+                    const char = rows[i][j];
+                    if (char === '"') inQuotes = !inQuotes;
+                    else if (char === ',' && !inQuotes) { cols.push(current); current = ""; }
+                    else current += char;
+                }
+                cols.push(current);
+                if (cols.length < 5) continue;
                 const clean = (v) => v ? v.replace(/"/g, '').trim() : "";
                 const name = clean(cols[0]), rate = parseFloat(clean(cols[1])), date = clean(cols[2]), branch = clean(cols[8]) || "Branch A";
                 const s1 = clean(cols[3]).split('-'), s2 = clean(cols[4]).split('-'), s3 = clean(cols[5]).split('-');
@@ -330,8 +342,41 @@ window.updateNameFromDropdown = function () { const s = document.getElementById(
 window.updateBranchFromDropdown = function () { const s = document.getElementById("branchSelectDropdown"); if (s.value !== "") { document.getElementById("branchName").value = s.value; renderAll(); } };
 window.deleteEntry = function (id) { if (confirm("Delete day?")) { masterData = masterData.filter(e => e.id !== id); localStorage.setItem("payroll_v20", JSON.stringify(masterData)); renderAll(); } };
 window.deleteEmployeeBulk = function (n) { if (confirm("Clear history for " + n + "?")) { masterData = masterData.filter(e => e.name !== n); localStorage.setItem("payroll_v20", JSON.stringify(masterData)); renderAll(); } };
-window.clearAllTablesSecure = function () { if (prompt("Security PIN (1234):") === "1234") { if (confirm("Permanently wipe database?")) { masterData = []; localStorage.removeItem("payroll_v20"); renderAll(); } } };
-window.exportToExcel = function () { let csv = "Employee,Rate,Date,Shift 1,Shift 2,Shift 3,Total Hours,Pay,Branch\n"; masterData.forEach(e => { csv += `${e.name},${e.rate},${e.date},"${e.s1s}-${e.s1e}","${e.s2s}-${e.s2e}","${e.s3s}-${e.s3e}",${decToT(e.total)},${e.pay},${e.branch}\n`; }); const blob = new Blob([csv], { type: 'text/csv' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `Payroll_Final_v20.csv`; a.click(); };
+window.clearAllTablesSecure = function () { if (prompt(`Security PIN:`)) { if (confirm("Permanently wipe database?")) { masterData = []; localStorage.removeItem("payroll_v20"); renderAll(); } } };
+
+window.clearAllTablesSecure = function () {
+    const p = prompt("Security PIN:");
+    if (p === appSettings.securityPin) {
+        if (confirm("Permanently wipe database?")) {
+            masterData = [];
+            localStorage.removeItem("payroll_v20");
+            renderAll();
+        }
+    } else if (p) {
+        alert("Incorrect PIN.");
+    }
+};
+
+window.exportToExcel = function () {
+    let csv = "Employee,Rate,Date,Shift 1,Shift 2,Shift 3,Total Hours,Pay,Branch\n";
+    masterData.forEach(e => { csv += `${e.name},${e.rate},${e.date},"${e.s1s}-${e.s1e}","${e.s2s}-${e.s2e}","${e.s3s}-${e.s3e}",${decToT(e.total)},${e.pay},${e.branch}\n`; });
+
+    csv += "\nSummary Data\n";
+    csv += "Employee,Branch,Total Hours,Cumulative Pay\n";
+    const emps = [...new Set(masterData.map(e => e.name))];
+    emps.forEach(n => {
+        let ent = masterData.filter(x => x.name === n);
+        let h = ent.reduce((s, c) => s + c.total, 0);
+        let p = ent.reduce((s, c) => s + parseFloat(c.pay), 0);
+        csv += `"${n}","${ent[0].branch}",${decToT(h)},${p.toFixed(2)}\n`;
+    });
+
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `Payroll_Final_v20.csv`;
+    a.click();
+};
 window.editEntry = function (id) { const e = masterData.find(x => x.id === id); if (!e) return; editingId = id; document.getElementById("empName").value = e.name; document.getElementById("branchName").value = e.branch; document.getElementById("workDate").value = e.date; document.getElementById("s1start").value = e.s1s; document.getElementById("s1end").value = e.s1e; document.getElementById("s2start").value = e.s2s; document.getElementById("s2end").value = e.s2e; document.getElementById("s3start").value = e.s3s; document.getElementById("s3end").value = e.s3e; document.getElementById("hourlyRate").value = e.rate; document.getElementById("mainBtn").innerText = "Update Log"; window.scrollTo(0, 0); };
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';

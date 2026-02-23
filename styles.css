@@ -108,7 +108,7 @@
             display: flex;
             gap: 15px;
             flex-wrap: wrap;
-            align-items: stretch;
+            align-items: flex-start;
         }
 
         .card {
@@ -322,4 +322,57 @@
         .bulk-card {
             background: #fff9db;
             border: 1px solid #ffeeba;
+        }
+
+        /* Toggle Switch CSS */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+            flex-shrink: 0;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        input:checked+.slider {
+            background-color: #4cd964;
+        }
+
+        input:checked+.slider:before {
+            transform: translateX(20px);
+        }
+
+        #entryCard {
+            max-width: 800px;
+            margin: 0 auto;
         }

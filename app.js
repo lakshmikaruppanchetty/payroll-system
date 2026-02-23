@@ -4,6 +4,7 @@ appSettings.showBranch = appSettings.showBranch ?? false;
 appSettings.showSummary = appSettings.showSummary ?? false;
 appSettings.showPdf = appSettings.showPdf ?? true;
 appSettings.showCsv = appSettings.showCsv ?? true;
+appSettings.showLogo = appSettings.showLogo ?? false;
 appSettings.companyLogo = appSettings.companyLogo ?? null;
 let editingId = null; let selectedId = null;
 
@@ -25,6 +26,7 @@ function saveSettings() {
     appSettings.showSummary = document.getElementById("toggleSummary").checked;
     appSettings.showPdf = document.getElementById("togglePdf").checked;
     appSettings.showCsv = document.getElementById("toggleCsv").checked;
+    appSettings.showLogo = document.getElementById("toggleLogo").checked;
     localStorage.setItem("settings_v20", JSON.stringify(appSettings));
     applySettings();
 }
@@ -46,13 +48,27 @@ function applySettings() {
     document.getElementById("toggleSummary").checked = appSettings.showSummary;
     document.getElementById("togglePdf").checked = appSettings.showPdf;
     document.getElementById("toggleCsv").checked = appSettings.showCsv;
+    document.getElementById("toggleLogo").checked = appSettings.showLogo;
 
+    const logoContainer = document.getElementById("logoContainer");
     const logoImg = document.getElementById("sidebarLogo");
-    if (appSettings.companyLogo) {
-        logoImg.src = appSettings.companyLogo;
-        logoImg.style.display = "inline-block";
+    const logoPlaceholder = document.getElementById("sidebarLogoPlaceholder");
+    const logoUploadSection = document.getElementById("logoUploadSection");
+
+    if (appSettings.showLogo) {
+        logoContainer.style.display = "block";
+        logoUploadSection.style.display = "block";
+        if (appSettings.companyLogo) {
+            logoImg.src = appSettings.companyLogo;
+            logoImg.style.display = "inline-block";
+            logoPlaceholder.style.display = "none";
+        } else {
+            logoImg.style.display = "none";
+            logoPlaceholder.style.display = "block";
+        }
     } else {
-        logoImg.style.display = "none";
+        logoContainer.style.display = "none";
+        logoUploadSection.style.display = "none";
     }
 }
 
@@ -158,7 +174,8 @@ window.renderAll = function () {
     const emps = [...new Set(masterData.map(e => e.name))], branches = [...new Set(masterData.map(e => e.branch))];
     const eS = document.getElementById("empSelect"), bS = document.getElementById("branchSelectDropdown");
     const cE = eS.value, cB = bS.value;
-    eS.innerHTML = emps.length > 1 || emps.length === 0 ? '<option value="">-- Select Employee --</option>' : '';
+    eS.style.display = emps.length <= 1 ? "none" : "";
+    eS.innerHTML = '<option value="">-- Select Employee --</option>';
     document.getElementById("viewFilter").innerHTML = emps.length > 1 || emps.length === 0 ? '<option value="ALL">All Employees</option>' : '';
     emps.forEach(n => { eS.innerHTML += `<option value="${n}">${n}</option>`; document.getElementById("viewFilter").innerHTML += `<option value="${n}">${n}</option>`; });
     bS.innerHTML = '<option value="">-- Select Branch --</option>'; document.getElementById("branchFilter").innerHTML = '<option value="ALL">All Branches</option>';

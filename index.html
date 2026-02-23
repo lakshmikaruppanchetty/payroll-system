@@ -12,9 +12,15 @@
 <body>
     <div class="sidebar" id="sidebar">
         <button class="sidebar-toggle" onclick="toggleSidebar()">☰</button>
-        <div id="logoContainer" style="text-align: center; margin-bottom: 20px; min-height: 60px; overflow: hidden;">
+        <div id="logoContainer"
+            style="text-align: center; margin-bottom: 20px; min-height: 60px; overflow: hidden; cursor: pointer;"
+            onclick="document.getElementById('logoUpload').click()">
             <img id="sidebarLogo"
                 style="max-width: 100%; max-height: 120px; display: none; border-radius: 8px; transition: max-width 0.3s;" />
+            <div id="sidebarLogoPlaceholder"
+                style="display: none; border: 2px dashed #6c757d; border-radius: 8px; padding: 10px; color: #adb5bd; font-size: 12px;">
+                Click to upload<br>Company Logo
+            </div>
         </div>
         <ul class="sidebar-menu">
             <li id="menuPayroll" class="active" onclick="switchTab('payroll')"><i>📁</i> <span>Payroll Management</span>
@@ -162,32 +168,55 @@
                 <h3>Company Logo</h3>
                 <p style="font-size: 12px; color: #666; margin-top: 0;">Upload a logo to display in the sidebar. This is
                     saved locally.</p>
-                <input type="file" id="logoUpload" accept="image/*" onchange="handleLogoUpload()"
-                    style="margin-bottom: 10px;">
-                <button class="btn-danger-x" onclick="clearLogo()" style="border-radius: 5px; padding: 8px 15px;">Remove
-                    Logo</button>
+                <div class="toggle-box" style="padding-top: 5px; margin-bottom: 15px;">
+                    <label class="switch">
+                        <input type="checkbox" id="toggleLogo" onchange="saveSettings()">
+                        <span class="slider"></span>
+                    </label>
+                    <label for="toggleLogo" style="margin: 0; font-size: 14px; cursor: pointer;">Enable Company
+                        Logo</label>
+                </div>
+                <div id="logoUploadSection">
+                    <input type="file" id="logoUpload" accept="image/*" onchange="handleLogoUpload()"
+                        style="margin-bottom: 10px;">
+                    <button class="btn-danger-x" onclick="clearLogo()"
+                        style="border-radius: 5px; padding: 8px 15px;">Remove
+                        Logo</button>
+                </div>
             </div>
             <div class="card" style="max-width: 600px;">
                 <h3>Feature Toggles</h3>
                 <p style="font-size: 12px; color: #666; margin-top: 0;">Enable or disable features in the Payroll
                     Management view.</p>
                 <div class="toggle-box" style="padding-top: 5px;">
-                    <input type="checkbox" id="toggleBranch" onchange="saveSettings()" style="width: auto;">
+                    <label class="switch">
+                        <input type="checkbox" id="toggleBranch" onchange="saveSettings()">
+                        <span class="slider"></span>
+                    </label>
                     <label for="toggleBranch" style="margin: 0; font-size: 14px; cursor: pointer;">Enable Branches
                         Dropdowns</label>
                 </div>
                 <div class="toggle-box" style="padding-top: 5px;">
-                    <input type="checkbox" id="toggleSummary" onchange="saveSettings()" style="width: auto;">
+                    <label class="switch">
+                        <input type="checkbox" id="toggleSummary" onchange="saveSettings()">
+                        <span class="slider"></span>
+                    </label>
                     <label for="toggleSummary" style="margin: 0; font-size: 14px; cursor: pointer;">Enable Employee
                         Summary Table</label>
                 </div>
                 <div class="toggle-box" style="padding-top: 5px;">
-                    <input type="checkbox" id="togglePdf" onchange="saveSettings()" style="width: auto;">
+                    <label class="switch">
+                        <input type="checkbox" id="togglePdf" onchange="saveSettings()">
+                        <span class="slider"></span>
+                    </label>
                     <label for="togglePdf" style="margin: 0; font-size: 14px; cursor: pointer;">Enable Punch Card
                         (PDF)</label>
                 </div>
                 <div class="toggle-box" style="padding-top: 5px;">
-                    <input type="checkbox" id="toggleCsv" onchange="saveSettings()" style="width: auto;">
+                    <label class="switch">
+                        <input type="checkbox" id="toggleCsv" onchange="saveSettings()">
+                        <span class="slider"></span>
+                    </label>
                     <label for="toggleCsv" style="margin: 0; font-size: 14px; cursor: pointer;">Enable CSV
                         Backup</label>
                 </div>

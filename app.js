@@ -4,6 +4,7 @@ appSettings.showBranch = appSettings.showBranch ?? false;
 appSettings.showSummary = appSettings.showSummary ?? false;
 appSettings.showPdf = appSettings.showPdf ?? true;
 appSettings.showCsv = appSettings.showCsv ?? true;
+appSettings.showExportPdf = appSettings.showExportPdf ?? true;
 appSettings.showLogo = appSettings.showLogo ?? false;
 appSettings.companyLogo = appSettings.companyLogo ?? null;
 appSettings.minRate = appSettings.minRate ?? 15;
@@ -49,6 +50,7 @@ function saveSettings() {
     appSettings.showSummary = document.getElementById("toggleSummary").checked;
     appSettings.showPdf = document.getElementById("togglePdf").checked;
     appSettings.showCsv = document.getElementById("toggleCsv").checked;
+    appSettings.showExportPdf = document.getElementById("toggleExportPdf").checked;
     appSettings.showLogo = document.getElementById("toggleLogo").checked;
     appSettings.ocrEngine = document.getElementById("ocrEngineSelect").value;
     appSettings.llmApiKey = document.getElementById("llmApiKey").value;
@@ -98,6 +100,8 @@ function applySettings() {
     document.getElementById("toggleSummary").checked = appSettings.showSummary;
     document.getElementById("togglePdf").checked = appSettings.showPdf;
     document.getElementById("toggleCsv").checked = appSettings.showCsv;
+    document.getElementById("toggleExportPdf").checked = appSettings.showExportPdf;
+    document.getElementById("btnExportPdf").style.display = appSettings.showExportPdf ? "" : "none";
     document.getElementById("toggleLogo").checked = appSettings.showLogo;
 
     let engine = appSettings.ocrEngine;
@@ -362,8 +366,6 @@ window.updateNameFromDropdown = function () { const s = document.getElementById(
 window.updateBranchFromDropdown = function () { const s = document.getElementById("branchSelectDropdown"); if (s.value !== "") { document.getElementById("branchName").value = s.value; renderAll(); } };
 window.deleteEntry = function (id) { if (confirm("Delete day?")) { masterData = masterData.filter(e => e.id !== id); localStorage.setItem("payroll_v20", JSON.stringify(masterData)); renderAll(); } };
 window.deleteEmployeeBulk = function (n) { if (confirm("Clear history for " + n + "?")) { masterData = masterData.filter(e => e.name !== n); localStorage.setItem("payroll_v20", JSON.stringify(masterData)); renderAll(); } };
-window.clearAllTablesSecure = function () { if (prompt(`Security PIN:`)) { if (confirm("Permanently wipe database?")) { masterData = []; localStorage.removeItem("payroll_v20"); renderAll(); } } };
-
 window.clearAllTablesSecure = function () {
     const p = prompt("Security PIN:");
     if (p === appSettings.securityPin) {
@@ -378,24 +380,40 @@ window.clearAllTablesSecure = function () {
 };
 
 window.exportToExcel = function () {
-    let csv = "Employee,Rate,Date,Shift 1,Shift 2,Shift 3,Total Hours,Pay,Branch\n";
-    masterData.forEach(e => { csv += `${e.name},${e.rate},${e.date},"${e.s1s}-${e.s1e}","${e.s2s}-${e.s2e}","${e.s3s}-${e.s3e}",${decToT(e.total)},${e.pay},${e.branch}\n`; });
+    let csv = "Date,Employee,Branch,Shift 1,Shift 2,Shift 3,Total Hours,Hourly Rate,Total Pay\n";
+    let curData = masterData.filter(d => {
+        let ok = true;
+        if (window.curFilter && window.curFilter !== "ALL") ok = d.name === window.curFilter;
+        if (ok && window.curBranchFilter && window.curBranchFilter !== "ALL") ok = d.branch === window.curBranchFilter;
+        const sD = document.getElementById("filterStartDate").value;
+        const eD = document.getElementById("filterEndDate").value;
+        if (ok && sD) ok = d.date >= sD;
+        if (ok && eD) ok = d.date <= eD;
+        return ok;
+    });
+
+    curData.forEach(d => {
+        csv += `"${d.date}","${d.name}","${d.branch}","${d.s1s}-${d.s1e}","${d.s2s}-${d.s2e}","${d.s3s}-${d.s3e}",${decToT(d.total)},$${d.rate},${d.pay}\n`;
+    });
 
     csv += "\nSummary Data\n";
     csv += "Employee,Branch,Total Hours,Cumulative Pay\n";
-    const emps = [...new Set(masterData.map(e => e.name))];
+    const emps = [...new Set(curData.map(e => e.name))];
     emps.forEach(n => {
-        let ent = masterData.filter(x => x.name === n);
+        let ent = curData.filter(x => x.name === n);
         let h = ent.reduce((s, c) => s + c.total, 0);
         let p = ent.reduce((s, c) => s + parseFloat(c.pay), 0);
         csv += `"${n}","${ent[0].branch}",${decToT(h)},${p.toFixed(2)}\n`;
     });
 
     const blob = new Blob([csv], { type: 'text/csv' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `Payroll_Final_v20.csv`;
-    a.click();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'payroll_report.csv';
+    a.click(); window.URL.revokeObjectURL(url);
+};
+
+window.exportToPDF = function () {
+    alert("Export to PDF functionality is currently being built. It will take the live filtered table exactly as shown and construct a rich PDF with company logos.");
 };
 window.editEntry = function (id) { const e = masterData.find(x => x.id === id); if (!e) return; editingId = id; document.getElementById("empName").value = e.name; document.getElementById("branchName").value = e.branch; document.getElementById("workDate").value = e.date; document.getElementById("s1start").value = e.s1s; document.getElementById("s1end").value = e.s1e; document.getElementById("s2start").value = e.s2s; document.getElementById("s2end").value = e.s2e; document.getElementById("s3start").value = e.s3s; document.getElementById("s3end").value = e.s3e; document.getElementById("hourlyRate").value = e.rate; document.getElementById("mainBtn").innerText = "Update Log"; window.scrollTo(0, 0); };
 

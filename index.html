@@ -140,9 +140,12 @@
                     onchange="renderAll()" style="width: 180px;">
                     <option value="ALL">All Branches</option>
                 </select>
-                <button class="btn-primary"
+                <button class="btn-primary" id="btnExportCsv"
                     style="background: #6c757d; margin: 0 0 0 15px; padding: 6px 12px; font-size: 13px;"
                     onclick="exportToExcel()">Export CSV</button>
+                <button class="btn-primary" id="btnExportPdf"
+                    style="background: #17a2b8; margin: 0 0 0 10px; padding: 6px 12px; font-size: 13px;"
+                    onclick="exportToPDF()">Generate PDF</button>
                 <button class="btn-primary"
                     style="background: #dc3545; margin: 0 0 0 10px; padding: 6px 12px; font-size: 13px;"
                     onclick="clearAllTablesSecure()">Clear Database</button>

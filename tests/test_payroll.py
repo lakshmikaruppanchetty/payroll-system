@@ -31,8 +31,9 @@ class TestPayrollManagement(unittest.TestCase):
         
         # Turn off settings to ensure DOM elements are fully visible without feature tabs
         driver.execute_script("document.getElementById('empName').value = 'Selenium Test User';")
-        driver.execute_script("document.getElementById('branchName').style.display = 'block';")
-        driver.execute_script("document.getElementById('branchName').value = 'Automated HQ';")
+        
+        # Test whether the element exists before updating style (as the layout changes dynamically)
+        driver.execute_script("if(document.getElementById('branchName')) { document.getElementById('branchName').style.display = 'block'; document.getElementById('branchName').value = 'Automated HQ'; }")
         driver.execute_script("document.getElementById('workDate').value = '2026-05-15'")
         driver.execute_script("document.getElementById('s1start').value = '09:00'")
         driver.execute_script("document.getElementById('s1end').value = '17:00'")

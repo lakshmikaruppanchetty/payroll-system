@@ -8,6 +8,8 @@ appSettings.showLogo = appSettings.showLogo ?? false;
 appSettings.companyLogo = appSettings.companyLogo ?? null;
 appSettings.minRate = appSettings.minRate ?? 15;
 appSettings.maxRate = appSettings.maxRate ?? 35;
+appSettings.ocrEngine = appSettings.ocrEngine ?? 'free';
+appSettings.llmApiKey = appSettings.llmApiKey ?? '';
 let editingId = null; let selectedId = null;
 
 window.renderRates = function () {
@@ -46,6 +48,8 @@ function saveSettings() {
     appSettings.showPdf = document.getElementById("togglePdf").checked;
     appSettings.showCsv = document.getElementById("toggleCsv").checked;
     appSettings.showLogo = document.getElementById("toggleLogo").checked;
+    appSettings.ocrEngine = document.getElementById("toggleLlm").checked ? 'llm' : 'free';
+    appSettings.llmApiKey = document.getElementById("llmApiKey").value;
     appSettings.minRate = document.getElementById("minRateSetting").value;
     appSettings.maxRate = document.getElementById("maxRateSetting").value;
     localStorage.setItem("settings_v20", JSON.stringify(appSettings));
@@ -71,6 +75,9 @@ function applySettings() {
     document.getElementById("togglePdf").checked = appSettings.showPdf;
     document.getElementById("toggleCsv").checked = appSettings.showCsv;
     document.getElementById("toggleLogo").checked = appSettings.showLogo;
+    document.getElementById("toggleLlm").checked = appSettings.ocrEngine === 'llm';
+    document.getElementById("llmApiSection").style.display = appSettings.ocrEngine === 'llm' ? 'flex' : 'none';
+    document.getElementById("llmApiKey").value = appSettings.llmApiKey;
     document.getElementById("minRateSetting").value = appSettings.minRate;
     document.getElementById("maxRateSetting").value = appSettings.maxRate;
 
@@ -313,6 +320,7 @@ window.previewPDF = async function () {
             let matches = parseTimes(textStr);
 
             if (matches.length >= 2) applyAutofill(matches);
+            else if (appSettings.ocrEngine === 'llm') callOpenAI(canvas);
             else runOCR(canvas);
         };
         reader.readAsArrayBuffer(f);
@@ -334,7 +342,8 @@ window.previewPDF = async function () {
                 const v = document.getElementById('pdfViewer');
                 v.innerHTML = ""; v.appendChild(displayCanvas);
 
-                runOCR(canvas);
+                if (appSettings.ocrEngine === 'llm') callOpenAI(canvas);
+                else runOCR(canvas);
             };
             img.src = e.target.result;
         };
@@ -392,5 +401,46 @@ async function runOCR(canvas) {
     } catch (e) {
         document.getElementById('ocrToast')?.remove();
         console.log("OCR Error", e);
+    }
+}
+
+async function callOpenAI(canvas) {
+    if (!appSettings.llmApiKey || appSettings.llmApiKey.length < 10) return alert("Please enter a valid OpenAI API Key in Settings to use the Premium LLM engine.");
+    document.getElementById('pdfViewer').insertAdjacentHTML('afterbegin', "<div id='ocrToast' style='position:absolute; top:10px; left:50%; transform:translateX(-50%); background:#007bff; padding:5px 10px; border-radius:5px; font-weight:bold; color:#fff; box-shadow: 0 4px 6px rgba(0,0,0,0.4);'>Running LLM Analysis... Please wait 🧠</div>");
+
+    const base64Image = canvas.toDataURL('image/jpeg').split(',')[1];
+    try {
+        const response = await fetch("https://api.openai.com/v1/chat/completions", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${appSettings.llmApiKey}` },
+            body: JSON.stringify({
+                model: "gpt-4o",
+                messages: [{
+                    role: "user",
+                    content: [
+                        { type: "text", text: "Read this handwritten timesheet. Extract the chronological start and end times for up to 3 shifts. Return ONLY a JSON array of 6 strings representing start/end times in 24-hour 'HH:MM' format. Example: ['09:00', '13:00', '14:00', '18:00', '', '']. If fewer times exist, return empty strings for the remainder. Output nothing else." },
+                        { type: "image_url", image_url: { url: `data:image/jpeg;base64,${base64Image}` } }
+                    ]
+                }],
+                max_tokens: 150
+            })
+        });
+
+        const data = await response.json();
+        document.getElementById('ocrToast')?.remove();
+
+        if (data.error) return alert("LLM API Error: " + data.error.message);
+
+        let content = data.choices[0].message.content.trim().replace(/```json/g, '').replace(/```/g, '').trim();
+        let timesArray = JSON.parse(content);
+        let validMatches = timesArray.filter(t => t && t.length >= 4);
+
+        if (validMatches.length >= 2) applyAutofill(validMatches);
+        else alert("LLM could not confidently detect clear shift timings. Please enter manually.");
+
+    } catch (e) {
+        document.getElementById('ocrToast')?.remove();
+        console.error("LLM Error:", e);
+        alert("Failed to communicate with LLM API. Ensure your API key is correct.");
     }
 }

@@ -6,17 +6,36 @@ appSettings.showPdf = appSettings.showPdf ?? true;
 appSettings.showCsv = appSettings.showCsv ?? true;
 appSettings.showLogo = appSettings.showLogo ?? false;
 appSettings.companyLogo = appSettings.companyLogo ?? null;
+appSettings.minRate = appSettings.minRate ?? 15;
+appSettings.maxRate = appSettings.maxRate ?? 35;
 let editingId = null; let selectedId = null;
 
-window.onload = function () {
+window.renderRates = function () {
     const rateSelect = document.getElementById("hourlyRate");
     const bulkRateSelect = document.getElementById("bulkRateSelect");
-    for (let i = 15; i <= 35; i++) {
+    const cR = rateSelect.value;
+    const cBR = bulkRateSelect.value;
+    rateSelect.innerHTML = ""; bulkRateSelect.innerHTML = "";
+
+    let minR = parseInt(appSettings.minRate, 10);
+    let maxR = parseInt(appSettings.maxRate, 10);
+    if (isNaN(minR)) minR = 15;
+    if (isNaN(maxR)) maxR = 35;
+    if (minR > maxR) maxR = minR;
+
+    for (let i = minR; i <= maxR; i++) {
         let opt1 = document.createElement("option"); opt1.value = i; opt1.text = "$" + i;
         let opt2 = document.createElement("option"); opt2.value = i; opt2.text = "$" + i;
         if (i === 17) { opt1.selected = true; opt2.selected = true; }
         rateSelect.appendChild(opt1); bulkRateSelect.appendChild(opt2);
     }
+
+    if (cR && cR >= minR && cR <= maxR) rateSelect.value = cR;
+    if (cBR && cBR >= minR && cBR <= maxR) bulkRateSelect.value = cBR;
+};
+
+window.onload = function () {
+    renderRates();
     applySettings();
     toggleClockFormat(); renderAll();
 };
@@ -27,8 +46,11 @@ function saveSettings() {
     appSettings.showPdf = document.getElementById("togglePdf").checked;
     appSettings.showCsv = document.getElementById("toggleCsv").checked;
     appSettings.showLogo = document.getElementById("toggleLogo").checked;
+    appSettings.minRate = document.getElementById("minRateSetting").value;
+    appSettings.maxRate = document.getElementById("maxRateSetting").value;
     localStorage.setItem("settings_v20", JSON.stringify(appSettings));
     applySettings();
+    renderRates();
 }
 
 function applySettings() {
@@ -49,6 +71,8 @@ function applySettings() {
     document.getElementById("togglePdf").checked = appSettings.showPdf;
     document.getElementById("toggleCsv").checked = appSettings.showCsv;
     document.getElementById("toggleLogo").checked = appSettings.showLogo;
+    document.getElementById("minRateSetting").value = appSettings.minRate;
+    document.getElementById("maxRateSetting").value = appSettings.maxRate;
 
     const logoContainer = document.getElementById("logoContainer");
     const logoImg = document.getElementById("sidebarLogo");
@@ -172,11 +196,14 @@ window.renderAll = function () {
     let hasS3 = masterData.some(e => e.s3s && e.s3s.length >= 4); document.getElementById("shift3Header").style.display = hasS3 ? "" : "none";
     masterData.sort((a, b) => a.name.localeCompare(b.name) || a.date.localeCompare(b.date));
     const emps = [...new Set(masterData.map(e => e.name))], branches = [...new Set(masterData.map(e => e.branch))];
-    const eS = document.getElementById("empSelect"), bS = document.getElementById("branchSelectDropdown");
-    const cE = eS.value, cB = bS.value;
+    const eS = document.getElementById("empSelect"), bS = document.getElementById("branchSelectDropdown"), bET = document.getElementById("bulkEmpTarget");
+    const cE = eS.value, cB = bS.value, cBET = bET.value;
     eS.style.display = emps.length <= 1 ? "none" : "";
     eS.innerHTML = '<option value="">-- Select Employee --</option>';
     document.getElementById("viewFilter").innerHTML = emps.length > 1 || emps.length === 0 ? '<option value="ALL">All Employees</option>' : '';
+    bET.innerHTML = emps.length > 1 || emps.length === 0 ? '<option value="ALL">ALL Employees</option><option value="SELECTED">Selected Only</option>' : '<option value="SELECTED">Selected Only</option>';
+    if (cBET && Array.from(bET.options).some(o => o.value === cBET)) bET.value = cBET;
+
     emps.forEach(n => { eS.innerHTML += `<option value="${n}">${n}</option>`; document.getElementById("viewFilter").innerHTML += `<option value="${n}">${n}</option>`; });
     bS.innerHTML = '<option value="">-- Select Branch --</option>'; document.getElementById("branchFilter").innerHTML = '<option value="ALL">All Branches</option>';
     branches.forEach(b => { bS.innerHTML += `<option value="${b}">${b}</option>`; document.getElementById("branchFilter").innerHTML += `<option value="${b}">${b}</option>`; });

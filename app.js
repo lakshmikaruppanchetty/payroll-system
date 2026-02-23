@@ -287,4 +287,101 @@ window.exportToExcel = function () { let csv = "Employee,Rate,Date,Shift 1,Shift
 window.editEntry = function (id) { const e = masterData.find(x => x.id === id); if (!e) return; editingId = id; document.getElementById("empName").value = e.name; document.getElementById("branchName").value = e.branch; document.getElementById("workDate").value = e.date; document.getElementById("s1start").value = e.s1s; document.getElementById("s1end").value = e.s1e; document.getElementById("s2start").value = e.s2s; document.getElementById("s2end").value = e.s2e; document.getElementById("s3start").value = e.s3s; document.getElementById("s3end").value = e.s3e; document.getElementById("hourlyRate").value = e.rate; document.getElementById("mainBtn").innerText = "Update Log"; window.scrollTo(0, 0); };
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-window.previewPDF = async function () { const f = document.getElementById('pdfUpload').files[0]; if (!f) return; const reader = new FileReader(); reader.onload = async function () { const pdf = await pdfjsLib.getDocument(new Uint8Array(this.result)).promise; const page = await pdf.getPage(1), viewport = page.getViewport({ scale: 1.5 }), canvas = document.createElement('canvas'); canvas.height = viewport.height; canvas.width = viewport.width; const v = document.getElementById('pdfViewer'); v.innerHTML = ""; v.appendChild(canvas); await page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise; }; reader.readAsArrayBuffer(f); };
+
+window.previewPDF = async function () {
+    const f = document.getElementById('pdfUpload').files[0];
+    if (!f) return;
+
+    document.getElementById('pdfViewer').innerHTML = "<p style='text-align:center; padding-top: 220px; color: #fff;'>Processing Document... 🤖</p>";
+
+    if (f.type === 'application/pdf') {
+        const reader = new FileReader();
+        reader.onload = async function () {
+            const pdf = await pdfjsLib.getDocument(new Uint8Array(this.result)).promise;
+            const page = await pdf.getPage(1);
+
+            const viewport = page.getViewport({ scale: 1.5 });
+            const canvas = document.createElement('canvas');
+            canvas.height = viewport.height; canvas.width = viewport.width;
+            const v = document.getElementById('pdfViewer');
+
+            await page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise;
+            v.innerHTML = ""; v.appendChild(canvas);
+
+            const textContent = await page.getTextContent();
+            const textStr = textContent.items.map(s => s.str).join(' ');
+            let matches = parseTimes(textStr);
+
+            if (matches.length >= 2) applyAutofill(matches);
+            else runOCR(canvas);
+        };
+        reader.readAsArrayBuffer(f);
+    } else if (f.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            const img = new Image();
+            img.onload = function () {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width; canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+
+                const displayCanvas = document.createElement('canvas');
+                const scale = Math.min(1, 800 / img.width);
+                displayCanvas.width = img.width * scale; displayCanvas.height = img.height * scale;
+                displayCanvas.getContext('2d').drawImage(img, 0, 0, displayCanvas.width, displayCanvas.height);
+
+                const v = document.getElementById('pdfViewer');
+                v.innerHTML = ""; v.appendChild(displayCanvas);
+
+                runOCR(canvas);
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(f);
+    } else {
+        document.getElementById('pdfViewer').innerHTML = "<p style='color:red; text-align:center; padding-top: 200px;'>Unsupported file type.</p>";
+    }
+};
+
+function parseTimes(text) {
+    const timeRegex = /\b(?:[0-1]?[0-9]|2[0-3]):[0-5][0-9](?:\s?[aApP][mM]?)?\b/g;
+    let matched = text.match(timeRegex) || [];
+
+    return matched.map(t => {
+        let clean = t.trim().toLowerCase();
+        let isPM = clean.includes('p');
+        let isAM = clean.includes('a');
+        let timePart = clean.replace(/[a-z\s]/g, '');
+        let [h, m] = timePart.split(':');
+        let hNum = parseInt(h, 10);
+        if (isPM && hNum < 12) hNum += 12;
+        if (isAM && hNum === 12) hNum = 0;
+        return `${hNum.toString().padStart(2, '0')}:${m}`;
+    });
+}
+
+function applyAutofill(matches) {
+    let f = document.getElementById("clockToggle").value;
+    if (f !== "24") { document.getElementById("clockToggle").value = "24"; window.toggleClockFormat(); }
+
+    if (matches[0] && matches[1]) { document.getElementById("s1start").value = matches[0].padStart(5, '0'); document.getElementById("s1end").value = matches[1].padStart(5, '0'); }
+    if (matches[2] && matches[3]) { document.getElementById("s2start").value = matches[2].padStart(5, '0'); document.getElementById("s2end").value = matches[3].padStart(5, '0'); }
+    if (matches[4] && matches[5]) { document.getElementById("s3start").value = matches[4].padStart(5, '0'); document.getElementById("s3end").value = matches[5].padStart(5, '0'); }
+
+    alert("⚠️ AI Auto-Fill Complete!\n\nWe successfully detected shift timings from the document.\n\nPlease CAREFULLY verify that the populated start and end times are perfectly accurate before saving!");
+}
+
+async function runOCR(canvas) {
+    document.getElementById('pdfViewer').insertAdjacentHTML('afterbegin', "<div id='ocrToast' style='position:absolute; top:10px; left:50%; transform:translateX(-50%); background:#ffc107; padding:5px 10px; border-radius:5px; font-weight:bold; color:#000; box-shadow: 0 4px 6px rgba(0,0,0,0.4);'>Running OCR Analysis... Please wait 🤖</div>");
+    try {
+        const result = await Tesseract.recognize(canvas, 'eng');
+        document.getElementById('ocrToast')?.remove();
+        let matches = parseTimes(result.data.text);
+        if (matches.length >= 2) applyAutofill(matches);
+        else alert("Could not detect clear shift timings from the document. Please enter manually.");
+    } catch (e) {
+        document.getElementById('ocrToast')?.remove();
+        console.log("OCR Error", e);
+    }
+}

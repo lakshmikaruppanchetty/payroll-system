@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Payroll Management System v20.0</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <link rel="stylesheet" href="styles.css">
 </head>
 
@@ -71,10 +72,10 @@
             <div class="flex-container">
                 <div class="card" style="flex: 1.2;" id="pdfCard">
                     <div class="pdf-controls">
-                        <label>Punch Card (PDF View)</label>
+                        <label>Punch Card (PDF/Image OCR View)</label>
                         <div style="display: flex; gap: 10px; align-items: center;">
-                            <input type="file" id="pdfUpload" accept=".pdf" style="flex: 1; font-size: 12px;">
-                            <button class="btn-primary" onclick="previewPDF()" style="margin:0;">Load PDF</button>
+                            <input type="file" id="pdfUpload" accept=".pdf, image/*" style="flex: 1; font-size: 12px;">
+                            <button class="btn-primary" onclick="previewPDF()" style="margin:0;">Load PDF/Img</button>
                         </div>
                     </div>
                     <div id="pdfViewer">

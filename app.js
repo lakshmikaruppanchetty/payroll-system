@@ -413,7 +413,109 @@ window.exportToExcel = function () {
 };
 
 window.exportToPDF = function () {
-    alert("Export to PDF functionality is currently being built. It will take the live filtered table exactly as shown and construct a rich PDF with company logos.");
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    // Header section
+    let currentY = 15;
+
+    // Add Logo if it exists in settings
+    if (appSettings.companyLogo) {
+        try {
+            doc.addImage(appSettings.companyLogo, 'PNG', 14, currentY, 40, 40, '', 'FAST');
+            currentY += 45;
+        } catch (e) {
+            console.error("Failed to inject logo into PDF:", e);
+        }
+    }
+
+    doc.setFontSize(18);
+    doc.text("Payroll & Shift Report", 14, currentY);
+    doc.setFontSize(10);
+    const dateStr = new Date().toLocaleDateString();
+    currentY += 6;
+    doc.text(`Generated on: ${dateStr}`, 14, currentY);
+
+    // Add Active Filters to Header
+    currentY += 6;
+    let filterText = "Filters Active: ";
+    if (window.curFilter && window.curFilter !== "ALL") filterText += `Employee [${window.curFilter}]  `;
+    if (window.curBranchFilter && window.curBranchFilter !== "ALL") filterText += `Branch [${window.curBranchFilter}]  `;
+    const sD = document.getElementById("filterStartDate").value;
+    const eD = document.getElementById("filterEndDate").value;
+    if (sD || eD) filterText += `Date [${sD || 'Any'} to ${eD || 'Any'}]`;
+    if (filterText === "Filters Active: ") filterText += "None";
+
+    doc.text(filterText, 14, currentY);
+    currentY += 10;
+
+    // Gather filtered data identical to CSV export
+    let curData = masterData.filter(d => {
+        let ok = true;
+        if (window.curFilter && window.curFilter !== "ALL") ok = d.name === window.curFilter;
+        if (ok && window.curBranchFilter && window.curBranchFilter !== "ALL") ok = d.branch === window.curBranchFilter;
+        if (ok && sD) ok = d.date >= sD;
+        if (ok && eD) ok = d.date <= eD;
+        return ok;
+    });
+
+    if (curData.length === 0) {
+        alert("No data to export!");
+        return;
+    }
+
+    // 1. Generate Main Shift Log Table
+    const tableHeaders = [["Date", "Employee", "Branch", "Shift Timings", "Total Hrs", "Rate", "Total Pay"]];
+    const tableRows = curData.map(d => [
+        d.date,
+        d.name,
+        d.branch,
+        `${d.s1s}-${d.s1e}${d.s2s ? '\n' + d.s2s + '-' + d.s2e : ''}${d.s3s ? '\n' + d.s3s + '-' + d.s3e : ''}`,
+        decToT(d.total),
+        `$${d.rate}`,
+        `$${d.pay}`
+    ]);
+
+    doc.autoTable({
+        startY: currentY,
+        head: tableHeaders,
+        body: tableRows,
+        theme: 'striped',
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [52, 58, 64] }
+    });
+
+    currentY = doc.lastAutoTable.finalY + 15;
+
+    // 2. Generate Summary Table
+    const emps = [...new Set(curData.map(e => e.name))];
+    const summaryHeaders = [["Employee", "Branch", "Total Cumulative Hours", "Total Cumulative Pay"]];
+    const summaryRows = emps.map(n => {
+        let ent = curData.filter(x => x.name === n);
+        let h = ent.reduce((s, c) => s + c.total, 0);
+        let p = ent.reduce((s, c) => s + parseFloat(c.pay), 0);
+        return [
+            n,
+            ent[0].branch,
+            decToT(h),
+            `$${p.toFixed(2)}`
+        ];
+    });
+
+    doc.setFontSize(14);
+    doc.text("Employee Summary", 14, currentY);
+    currentY += 5;
+
+    doc.autoTable({
+        startY: currentY,
+        head: summaryHeaders,
+        body: summaryRows,
+        theme: 'grid',
+        styles: { fontSize: 9, fontStyle: 'bold' },
+        headStyles: { fillColor: [23, 162, 184] }
+    });
+
+    doc.save('payroll_report.pdf');
 };
 window.editEntry = function (id) { const e = masterData.find(x => x.id === id); if (!e) return; editingId = id; document.getElementById("empName").value = e.name; document.getElementById("branchName").value = e.branch; document.getElementById("workDate").value = e.date; document.getElementById("s1start").value = e.s1s; document.getElementById("s1end").value = e.s1e; document.getElementById("s2start").value = e.s2s; document.getElementById("s2end").value = e.s2e; document.getElementById("s3start").value = e.s3s; document.getElementById("s3end").value = e.s3e; document.getElementById("hourlyRate").value = e.rate; document.getElementById("mainBtn").innerText = "Update Log"; window.scrollTo(0, 0); };
 

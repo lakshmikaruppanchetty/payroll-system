@@ -27,6 +27,7 @@
             <li id="menuPayroll" class="active" onclick="switchTab('payroll')"><i>📁</i> <span>Payroll Management</span>
             </li>
             <li id="menuSettings" onclick="switchTab('settings')"><i>⚙️</i> <span>Settings</span></li>
+            <li id="menuAbout" onclick="switchTab('about')"><i>ℹ️</i> <span>About</span></li>
         </ul>
     </div>
 
@@ -38,7 +39,9 @@
 
             <div class="flex-container" style="margin-bottom: 20px;">
                 <div class="card">
-                    <label id="setupHeaderLabel">1. Employee & Branch Setup</label>
+                    <label id="setupHeaderLabel">1. Employee & Branch Setup<span class="tooltip-icon">i<span
+                                class="tooltip-text">Create a new employee profile/branch to record metrics, or select
+                                from an existing one previously saved.</span></span></label>
                     <select id="empSelect" onchange="updateNameFromDropdown()">
                         <option value="">-- Select Employee --</option>
                     </select>
@@ -50,7 +53,9 @@
                 </div>
 
                 <div class="card bulk-card">
-                    <label>⚡ Global Profile Updates</label>
+                    <label>⚡ Global Profile Updates<span class="tooltip-icon">i<span class="tooltip-text">Mass-update
+                                the branch or hourly rate for all previous historical shifts
+                                simultaneously.</span></span></label>
                     <p style="font-size: 11px; margin-bottom: 8px; color: #856404;">Apply new Branch/Rate to all
                         historical records.</p>
                     <select id="bulkEmpTarget" style="margin-bottom:8px;">
@@ -61,7 +66,9 @@
                 </div>
 
                 <div class="card" id="csvCard">
-                    <label>2. Cloud Data Backup (CSV)</label>
+                    <label>2. Cloud Data Backup (CSV)<span class="tooltip-icon">i<span class="tooltip-text">Import your
+                                exported CSV file here to instantly synchronize and restore past payroll data into the
+                                system.</span></span></label>
                     <input type="file" id="csvImport" accept=".csv" style="padding: 4px; font-size: 11px;">
                     <button class="btn-import" onclick="importCSV()" style="margin-top:8px;">📂 Import/Sync CSV</button>
                     <p style="font-size: 10px; color: #666; margin-top: 5px;">Sync previous data files into your current
@@ -72,7 +79,9 @@
             <div class="flex-container">
                 <div class="card" style="flex: 1.2;" id="pdfCard">
                     <div class="pdf-controls">
-                        <label>Punch Card (PDF/Image OCR View)</label>
+                        <label>Punch Card (PDF/Image OCR View)<span class="tooltip-icon">i<span
+                                    class="tooltip-text">Upload a scanned timesheet photo or PDF here. The AI will read
+                                    the text and auto-fill the timings below.</span></span></label>
                         <div style="display: flex; gap: 10px; align-items: center;">
                             <input type="file" id="pdfUpload" accept=".pdf, image/*" style="flex: 1; font-size: 12px;">
                             <button class="btn-primary" onclick="previewPDF()" style="margin:0;">Load PDF/Img</button>
@@ -84,12 +93,16 @@
                 </div>
 
                 <div class="card" id="entryCard">
-                    <div class="toggle-box">
-                        <label style="margin:0;">Clock UI:</label>
-                        <select id="clockToggle" onchange="toggleClockFormat()" style="width: auto; padding: 4px;">
-                            <option value="24">24-Hour (HH:mm)</option>
-                            <option value="12">12-Hour (AM/PM)</option>
-                        </select>
+                    <div class="toggle-box" style="justify-content: space-between;">
+                        <div style="display: flex; align-items: center;">
+                            <label style="margin:0;">Clock UI:<span class="tooltip-icon"
+                                    style="margin-right: 10px;">i<span class="tooltip-text">Toggle between standard
+                                        12-hour AM/PM selection or a 24-hour native system clock.</span></span></label>
+                            <select id="clockToggle" onchange="toggleClockFormat()" style="width: auto; padding: 4px;">
+                                <option value="24">24-Hour (HH:mm)</option>
+                                <option value="12">12-Hour (AM/PM)</option>
+                            </select>
+                        </div>
                         <button class="btn-reset" onclick="resetShifts()" style="margin-left: 10px;">Clear Form</button>
                     </div>
                     <hr>
@@ -116,7 +129,9 @@
                 </div>
             </div>
 
-            <div class="section-header">Live Activity Log</div>
+            <div class="section-header">Live Activity Log<span class="tooltip-icon" style="margin-left: 10px;">i<span
+                        class="tooltip-text">View all created shifts chronologically. Filter by employees or specific
+                        branches to isolate records.</span></span></div>
             <div class="filter-container">
                 <label>Filter Employee:</label><select id="viewFilter" onchange="renderAll()" style="width: 180px;">
                     <option value="ALL">All Employees</option>
@@ -145,7 +160,10 @@
             </table>
 
             <div id="summaryTableSection">
-                <div class="section-header">Employee Summary & Bulk Actions</div>
+                <div class="section-header">Employee Summary & Bulk Actions<span class="tooltip-icon"
+                        style="margin-left: 10px;">i<span class="tooltip-text">A master pivot table displaying gross
+                            total pay and aggregate hours per employee limit. Includes a secure wipe database
+                            feature.</span></span></div>
                 <table id="summaryTable">
                     <thead>
                         <tr>
@@ -259,6 +277,45 @@
                     <label for="toggleCsv" style="margin: 0; font-size: 14px; cursor: pointer;">Enable CSV
                         Backup</label>
                 </div>
+            </div>
+        </div>
+
+        <div id="aboutView" class="view-section">
+            <h2 style="text-align: center;">About Payroll Management System</h2>
+            <div class="card"
+                style="margin-bottom: 20px; max-width: 800px; margin-left: auto; margin-right: auto; padding: 25px;">
+                <h3
+                    style="margin-top: 0; color: #007bff; border-bottom: 2px solid #007bff; padding-bottom: 5px; display: inline-block;">
+                    Platform Overview</h3>
+                <p style="line-height: 1.6; font-size: 14px; color: #444;">The Payroll Management System v20.0 is a
+                    highly intuitive, secure, and privacy-first static web application tailored for robust business
+                    operations. It computes exclusively on your local hardware securely.</p>
+
+                <h4 style="color: #333; margin-top: 25px; font-weight: 700;">🔹 Core Architectures & Features</h4>
+                <ul
+                    style="line-height: 1.6; font-size: 13px; color: #555; padding-left: 20px; list-style-type: square;">
+                    <li style="margin-bottom: 15px;"><strong>Employee & Branch Logistics:</strong> <br>Create unique
+                        profiles to seamlessly assign shifts to specific staff members and physical branches, providing
+                        highly structured data logging and advanced table filtering functionalities.</li>
+                    <li style="margin-bottom: 15px;"><strong>Cloud CSV Operations:</strong> <br>Securely export all
+                        chronological workforce data via CSV files for external accounting. You can reliably import/sync
+                        those tables back into the local system anytime to seamlessly restore full functionality.</li>
+                    <li style="margin-bottom: 15px;"><strong>AI Document Integration (Optical Character
+                            Recognition):</strong> <br>A multi-tiered AI OCR system. Utilize local Tesseract.js for free
+                        baseline document reading, or seamlessly inject Premium OpenAI (GPT-4o) and Google Gemini
+                        (Gemini 1.5) LLM APIs. Vision LLMs are capable of magically extracting and auto-filling shifts
+                        directly from cursive handwritten timesheet photographs in seconds without compromising your
+                        architecture.</li>
+                    <li style="margin-bottom: 15px;"><strong>Secure Data Storage:</strong> <br>All information,
+                        including configuration keys, exists entirely within your browser's persistent `localStorage`.
+                        Zero system databases exist to be compromised.</li>
+                    <li style="margin-bottom: 15px;"><strong>Real-Time Computations & Summaries:</strong> <br>The Live
+                        Activity framework monitors dynamic inputs and powers an embedded pivot table component
+                        representing Gross Pay and Total Hours, completely auto-calculated with active data boundaries.
+                    </li>
+                </ul>
+                <p style="text-align: center; margin-top: 35px; color: #aaa; font-size: 11px;">Version 20.0 • Built with
+                    HTML5 + Frontend Javascript</p>
             </div>
         </div>
     </div>

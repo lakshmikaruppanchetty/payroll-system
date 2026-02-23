@@ -1,0 +1,246 @@
+let masterData = JSON.parse(localStorage.getItem("payroll_v20")) || [];
+let appSettings = JSON.parse(localStorage.getItem("settings_v20")) || {};
+appSettings.showBranch = appSettings.showBranch ?? false;
+appSettings.showSummary = appSettings.showSummary ?? false;
+appSettings.showPdf = appSettings.showPdf ?? true;
+appSettings.showCsv = appSettings.showCsv ?? true;
+appSettings.companyLogo = appSettings.companyLogo ?? null;
+let editingId = null; let selectedId = null;
+
+window.onload = function () {
+    const rateSelect = document.getElementById("hourlyRate");
+    const bulkRateSelect = document.getElementById("bulkRateSelect");
+    for (let i = 15; i <= 35; i++) {
+        let opt1 = document.createElement("option"); opt1.value = i; opt1.text = "$" + i;
+        let opt2 = document.createElement("option"); opt2.value = i; opt2.text = "$" + i;
+        if (i === 17) { opt1.selected = true; opt2.selected = true; }
+        rateSelect.appendChild(opt1); bulkRateSelect.appendChild(opt2);
+    }
+    applySettings();
+    toggleClockFormat(); renderAll();
+};
+
+function saveSettings() {
+    appSettings.showBranch = document.getElementById("toggleBranch").checked;
+    appSettings.showSummary = document.getElementById("toggleSummary").checked;
+    appSettings.showPdf = document.getElementById("togglePdf").checked;
+    appSettings.showCsv = document.getElementById("toggleCsv").checked;
+    localStorage.setItem("settings_v20", JSON.stringify(appSettings));
+    applySettings();
+}
+
+function applySettings() {
+    const branchDisplay = appSettings.showBranch ? "" : "none";
+    document.getElementById("branchSelectDropdown").style.display = branchDisplay;
+    document.getElementById("branchName").style.display = branchDisplay;
+    document.getElementById("branchFilterLabel").style.display = branchDisplay;
+    document.getElementById("branchFilter").style.display = branchDisplay;
+    document.getElementById("hdrBranch").style.display = branchDisplay;
+    document.getElementById("setupHeaderLabel").innerText = appSettings.showBranch ? "1. Employee & Branch Setup" : "1. Employee Setup";
+
+    document.getElementById("summaryTableSection").style.display = appSettings.showSummary ? "" : "none";
+    document.getElementById("pdfCard").style.display = appSettings.showPdf ? "" : "none";
+    document.getElementById("csvCard").style.display = appSettings.showCsv ? "" : "none";
+
+    document.getElementById("toggleBranch").checked = appSettings.showBranch;
+    document.getElementById("toggleSummary").checked = appSettings.showSummary;
+    document.getElementById("togglePdf").checked = appSettings.showPdf;
+    document.getElementById("toggleCsv").checked = appSettings.showCsv;
+
+    const logoImg = document.getElementById("sidebarLogo");
+    if (appSettings.companyLogo) {
+        logoImg.src = appSettings.companyLogo;
+        logoImg.style.display = "inline-block";
+    } else {
+        logoImg.style.display = "none";
+    }
+}
+
+function handleLogoUpload() {
+    const file = document.getElementById("logoUpload").files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            appSettings.companyLogo = e.target.result;
+            saveSettings();
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+function clearLogo() {
+    appSettings.companyLogo = null;
+    document.getElementById("logoUpload").value = "";
+    saveSettings();
+}
+
+function switchTab(tab) {
+    document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.sidebar-menu li').forEach(el => el.classList.remove('active'));
+    document.getElementById(tab + 'View').classList.add('active');
+    document.getElementById('menu' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+}
+
+function toggleSidebar() {
+    document.getElementById("sidebar").classList.toggle("collapsed");
+}
+
+window.handleGlobalClick = function (e) {
+    if (!e.target.closest('tr') && !e.target.closest('button') && !e.target.closest('.card')) {
+        selectedId = null; document.getElementById("floatingDupBtn").style.display = "none"; renderAll();
+    }
+};
+
+window.selectRow = function (id, event) {
+    event.stopPropagation(); selectedId = id; renderAll();
+    const btn = document.getElementById("floatingDupBtn");
+    btn.style.display = "block"; btn.style.left = (event.pageX + 10) + "px"; btn.style.top = (event.pageY - 20) + "px";
+};
+
+window.duplicateSelected = function (event) {
+    event.stopPropagation();
+    const e = masterData.find(x => x.id === selectedId);
+    if (e) {
+        document.getElementById("empName").value = e.name; document.getElementById("branchName").value = e.branch;
+        document.getElementById("s1start").value = e.s1s; document.getElementById("s1end").value = e.s1e;
+        document.getElementById("s2start").value = e.s2s; document.getElementById("s2end").value = e.s2e;
+        document.getElementById("s3start").value = e.s3s; document.getElementById("s3end").value = e.s3e;
+        document.getElementById("hourlyRate").value = e.rate;
+        window.scrollTo(0, 0); selectedId = null; document.getElementById("floatingDupBtn").style.display = "none"; renderAll();
+    }
+};
+
+window.addEntry = function () {
+    const name = document.getElementById("empName").value;
+    const date = document.getElementById("workDate").value;
+    const branchInput = document.getElementById("branchName").value;
+    const branch = appSettings.showBranch ? branchInput : (branchInput || "Main Branch");
+
+    if (!name || !date || !branch) return alert("Fill Name, Date" + (appSettings.showBranch ? ", and Branch." : "."));
+    const dup = masterData.find(e => e.name === name && e.date === date);
+    if (dup && editingId !== dup.id) { if (confirm(`Existing record on ${date}. Edit?`)) editEntry(dup.id); return; }
+    if (editingId && !confirm(`Update record?`)) return;
+    const h = calcH(document.getElementById("s1start").value, document.getElementById("s1end").value) + calcH(document.getElementById("s2start").value, document.getElementById("s2end").value) + calcH(document.getElementById("s3start").value, document.getElementById("s3end").value);
+    const rate = parseFloat(document.getElementById("hourlyRate").value);
+    const entry = { id: editingId || Date.now(), name, date, branch, s1s: document.getElementById("s1start").value, s1e: document.getElementById("s1end").value, s2s: document.getElementById("s2start").value, s2e: document.getElementById("s2end").value, s3s: document.getElementById("s3start").value, s3e: document.getElementById("s3end").value, total: h, rate, pay: (h * rate).toFixed(2) };
+    if (editingId) masterData = masterData.filter(e => e.id !== editingId);
+    masterData.push(entry); localStorage.setItem("payroll_v20", JSON.stringify(masterData));
+    editingId = null; resetShifts(); renderAll();
+};
+
+window.importCSV = function () {
+    const fileInput = document.getElementById('csvImport'); if (!fileInput.files[0]) return;
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        try {
+            const rows = e.target.result.split(/\r?\n/).filter(r => r.trim()); let aC = 0, uC = 0;
+            for (let i = 1; i < rows.length; i++) {
+                const cols = rows[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g); if (!cols || cols.length < 5) continue;
+                const clean = (v) => v ? v.replace(/"/g, '').trim() : "";
+                const name = clean(cols[0]), rate = parseFloat(clean(cols[1])), date = clean(cols[2]), branch = clean(cols[8]) || "Branch A";
+                const s1 = clean(cols[3]).split('-'), s2 = clean(cols[4]).split('-'), s3 = clean(cols[5]).split('-');
+                const h = calcH(s1[0], s1[1]) + calcH(s2[0], s2[1]) + calcH(s3[0], s3[1]);
+                const entry = { id: Date.now() + i, name, date, branch, s1s: s1[0] || "", s1e: s1[1] || "", s2s: s2[0] || "", s2e: s2[1] || "", s3s: s3[0] || "", s3e: s3[1] || "", total: h, rate, pay: (h * rate).toFixed(2) };
+                const exIdx = masterData.findIndex(ex => ex.name === name && ex.date === date && ex.branch === branch);
+                if (exIdx > -1) { masterData[exIdx] = entry; uC++; } else { masterData.push(entry); aC++; }
+            }
+            localStorage.setItem("payroll_v20", JSON.stringify(masterData)); renderAll(); alert(`Synced: ${aC} new, ${uC} updated.`);
+        } catch (e) { alert("Format Error."); }
+    }; reader.readAsText(fileInput.files[0]);
+};
+
+window.renderAll = function () {
+    const dailyBody = document.getElementById("dailyTableBody"); const summaryBody = document.querySelector("#summaryTable tbody");
+    const vEmp = document.getElementById("viewFilter").value; const vBranch = document.getElementById("branchFilter").value;
+    dailyBody.innerHTML = ""; summaryBody.innerHTML = "";
+    let hasS3 = masterData.some(e => e.s3s && e.s3s.length >= 4); document.getElementById("shift3Header").style.display = hasS3 ? "" : "none";
+    masterData.sort((a, b) => a.name.localeCompare(b.name) || a.date.localeCompare(b.date));
+    const emps = [...new Set(masterData.map(e => e.name))], branches = [...new Set(masterData.map(e => e.branch))];
+    const eS = document.getElementById("empSelect"), bS = document.getElementById("branchSelectDropdown");
+    const cE = eS.value, cB = bS.value;
+    eS.innerHTML = emps.length > 1 || emps.length === 0 ? '<option value="">-- Select Employee --</option>' : '';
+    document.getElementById("viewFilter").innerHTML = emps.length > 1 || emps.length === 0 ? '<option value="ALL">All Employees</option>' : '';
+    emps.forEach(n => { eS.innerHTML += `<option value="${n}">${n}</option>`; document.getElementById("viewFilter").innerHTML += `<option value="${n}">${n}</option>`; });
+    bS.innerHTML = '<option value="">-- Select Branch --</option>'; document.getElementById("branchFilter").innerHTML = '<option value="ALL">All Branches</option>';
+    branches.forEach(b => { bS.innerHTML += `<option value="${b}">${b}</option>`; document.getElementById("branchFilter").innerHTML += `<option value="${b}">${b}</option>`; });
+
+    if (emps.length === 1) {
+        eS.value = emps[0];
+        document.getElementById("viewFilter").value = emps[0];
+        if (!document.getElementById("empName").value) document.getElementById("empName").value = emps[0];
+    } else {
+        eS.value = cE; document.getElementById("viewFilter").value = vEmp;
+    }
+    bS.value = cB; document.getElementById("branchFilter").value = vBranch;
+    let display = masterData.filter(e => (vEmp === "ALL" || e.name === vEmp) && (vBranch === "ALL" || e.branch === vBranch));
+    let curE = "";
+    display.forEach(e => {
+        if (e.name !== curE) {
+            curE = e.name; let ent = display.filter(x => x.name === e.name);
+            let h = ent.reduce((s, c) => s + c.total, 0), p = ent.reduce((s, c) => s + parseFloat(c.pay), 0);
+            const brText = appSettings.showBranch ? ` (${e.branch}) ` : ' ';
+            dailyBody.innerHTML += `<tr class="emp-separator-bar"><td colspan="${hasS3 ? 9 : 8}">${e.name}${brText}| Cumulative: ${decToT(h)} | Pay: $${p.toFixed(2)}</td></tr>`;
+        }
+        const d = e.date.split('-').slice(1).concat(e.date.split('-')[0]).join('-');
+        const brCell = appSettings.showBranch ? `<td>${e.branch}</td>` : '<td style="display:none"></td>';
+        dailyBody.innerHTML += `<tr ${selectedId === e.id ? 'class="selected"' : ''} onclick="selectRow(${e.id}, event)"><td>${d}</td>${brCell}<td>${e.s1s}-${e.s1e}</td><td>${e.s2s}-${e.s2e}</td><td style="display:${hasS3 ? '' : 'none'}">${e.s3s ? e.s3s + '-' + e.s3e : '-'}</td><td>${decToT(e.total)}</td><td>$${e.rate}</td><td>$${e.pay}</td><td><button class="btn-edit-small" onclick="event.stopPropagation(); editEntry(${e.id})">Edit</button><button class="btn-danger-x" onclick="event.stopPropagation(); deleteEntry(${e.id})">×</button></td></tr>`;
+    });
+    emps.forEach(n => {
+        let ent = masterData.filter(x => x.name === n); let h = ent.reduce((s, c) => s + c.total, 0), p = ent.reduce((s, c) => s + parseFloat(c.pay), 0);
+        summaryBody.innerHTML += `<tr style="background:#e8f5e9; font-weight:bold;"><td>${n}</td><td>${ent[0].branch}</td><td>${decToT(h)}</td><td>$${p.toFixed(2)}</td><td><button class="btn-danger-x" onclick="deleteEmployeeBulk('${n}')">Clear All</button></td></tr>`;
+    });
+};
+
+window.checkExistingShifts = function () {
+    const name = document.getElementById("empName").value, date = document.getElementById("workDate").value; if (!name || !date) return;
+    const e = masterData.find(x => x.name === name && x.date === date);
+    if (e) {
+        document.getElementById("s1start").value = e.s1s; document.getElementById("s1end").value = e.s1e; document.getElementById("s2start").value = e.s2s; document.getElementById("s2end").value = e.s2e; document.getElementById("s3start").value = e.s3s; document.getElementById("s3end").value = e.s3e;
+        document.getElementById("hourlyRate").value = e.rate; document.getElementById("branchName").value = e.branch;
+        editingId = e.id; document.getElementById("mainBtn").innerText = "Update Log";
+    } else { editingId = null; document.getElementById("mainBtn").innerText = "Save / Update Log"; }
+};
+
+window.executeBulkUpdate = function () {
+    const t = document.getElementById("bulkEmpTarget").value, sN = document.getElementById("empName").value, nB = document.getElementById("branchName").value, nR = parseFloat(document.getElementById("bulkRateSelect").value);
+    if (t === "SELECTED" && !sN) return alert("Select Employee."); if (!nB) return alert("Enter Branch.");
+    if (confirm(`Apply updates?`)) {
+        masterData = masterData.map(e => (t === "ALL" || e.name === sN) ? { ...e, branch: nB, rate: nR, pay: (e.total * nR).toFixed(2) } : e);
+        localStorage.setItem("payroll_v20", JSON.stringify(masterData)); renderAll();
+    }
+};
+
+function decToT(d) { const h = Math.floor(d), m = Math.round((d - h) * 60); return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`; }
+function calcH(s, e) { if (!s || !e || s.length < 5 || e.length < 5) return 0; let [h1, m1] = s.split(':').map(Number), [h2, m2] = e.split(':').map(Number), st = h1 + (m1 / 60), en = h2 + (m2 / 60); if (en < st) en += 24; return en - st; }
+
+window.toggleClockFormat = function () {
+    const f = document.getElementById("clockToggle").value;
+    let vals = {};
+    for (let i = 1; i <= 3; i++) {
+        vals[`s${i}start`] = document.getElementById(`s${i}start`)?.value || "";
+        vals[`s${i}end`] = document.getElementById(`s${i}end`)?.value || "";
+    }
+    for (let i = 1; i <= 3; i++) {
+        const r = document.getElementById(`s${i}_row`);
+        r.innerHTML = f === "24" ? `<input type="text" id="s${i}start" class="time-input-24" placeholder="00:00" maxlength="5"> <span>to</span> <input type="text" id="s${i}end" class="time-input-24" placeholder="00:00" maxlength="5">` : `<input type="time" id="s${i}start"> <span>to</span> <input type="time" id="s${i}end">`;
+    }
+    if (f === "24") setupMasks();
+    for (let i = 1; i <= 3; i++) {
+        if (document.getElementById(`s${i}start`)) document.getElementById(`s${i}start`).value = vals[`s${i}start`];
+        if (document.getElementById(`s${i}end`)) document.getElementById(`s${i}end`).value = vals[`s${i}end`];
+    }
+};
+
+function setupMasks() { document.querySelectorAll('.time-input-24').forEach(i => { i.addEventListener('input', (e) => { let v = e.target.value.replace(/\D/g, ''); if (v.length >= 3) e.target.value = v.slice(0, 2) + ":" + v.slice(2, 4); else e.target.value = v; }); }); }
+
+window.resetShifts = function () { ["s1start", "s1end", "s2start", "s2end", "s3start", "s3end"].forEach(id => { if (document.getElementById(id)) document.getElementById(id).value = ""; }); editingId = null; document.getElementById("workDate").value = ""; document.getElementById("mainBtn").innerText = "Save / Update Log"; };
+window.updateNameFromDropdown = function () { const s = document.getElementById("empSelect"); if (s.value !== "") { document.getElementById("empName").value = s.value; checkExistingShifts(); renderAll(); } };
+window.updateBranchFromDropdown = function () { const s = document.getElementById("branchSelectDropdown"); if (s.value !== "") { document.getElementById("branchName").value = s.value; renderAll(); } };
+window.deleteEntry = function (id) { if (confirm("Delete day?")) { masterData = masterData.filter(e => e.id !== id); localStorage.setItem("payroll_v20", JSON.stringify(masterData)); renderAll(); } };
+window.deleteEmployeeBulk = function (n) { if (confirm("Clear history for " + n + "?")) { masterData = masterData.filter(e => e.name !== n); localStorage.setItem("payroll_v20", JSON.stringify(masterData)); renderAll(); } };
+window.clearAllTablesSecure = function () { if (prompt("Security PIN (1234):") === "1234") { if (confirm("Permanently wipe database?")) { masterData = []; localStorage.removeItem("payroll_v20"); renderAll(); } } };
+window.exportToExcel = function () { let csv = "Employee,Rate,Date,Shift 1,Shift 2,Shift 3,Total Hours,Pay,Branch\n"; masterData.forEach(e => { csv += `${e.name},${e.rate},${e.date},"${e.s1s}-${e.s1e}","${e.s2s}-${e.s2e}","${e.s3s}-${e.s3e}",${decToT(e.total)},${e.pay},${e.branch}\n`; }); const blob = new Blob([csv], { type: 'text/csv' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `Payroll_Final_v20.csv`; a.click(); };
+window.editEntry = function (id) { const e = masterData.find(x => x.id === id); if (!e) return; editingId = id; document.getElementById("empName").value = e.name; document.getElementById("branchName").value = e.branch; document.getElementById("workDate").value = e.date; document.getElementById("s1start").value = e.s1s; document.getElementById("s1end").value = e.s1e; document.getElementById("s2start").value = e.s2s; document.getElementById("s2end").value = e.s2e; document.getElementById("s3start").value = e.s3s; document.getElementById("s3end").value = e.s3e; document.getElementById("hourlyRate").value = e.rate; document.getElementById("mainBtn").innerText = "Update Log"; window.scrollTo(0, 0); };
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+window.previewPDF = async function () { const f = document.getElementById('pdfUpload').files[0]; if (!f) return; const reader = new FileReader(); reader.onload = async function () { const pdf = await pdfjsLib.getDocument(new Uint8Array(this.result)).promise; const page = await pdf.getPage(1), viewport = page.getViewport({ scale: 1.5 }), canvas = document.createElement('canvas'); canvas.height = viewport.height; canvas.width = viewport.width; const v = document.getElementById('pdfViewer'); v.innerHTML = ""; v.appendChild(canvas); await page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise; }; reader.readAsArrayBuffer(f); };

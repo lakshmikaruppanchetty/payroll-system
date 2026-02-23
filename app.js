@@ -143,8 +143,19 @@ function toggleSidebar() {
 
 window.handleGlobalClick = function (e) {
     if (!e.target.closest('tr') && !e.target.closest('button') && !e.target.closest('.card')) {
-        selectedId = null; document.getElementById("floatingDupBtn").style.display = "none"; renderAll();
+        let activeRow = document.querySelector('tr.selected');
+        if (activeRow) {
+            activeRow.classList.remove('selected');
+            selectedId = null;
+            document.getElementById("floatingDupBtn").style.display = "none";
+        }
     }
+};
+
+window.clearDateFilter = function () {
+    document.getElementById("filterStartDate").value = "";
+    document.getElementById("filterEndDate").value = "";
+    renderAll();
 };
 
 window.selectRow = function (id, event) {
@@ -232,7 +243,28 @@ window.renderAll = function () {
         eS.value = cE; document.getElementById("viewFilter").value = vEmp;
     }
     bS.value = cB; document.getElementById("branchFilter").value = vBranch;
-    let display = masterData.filter(e => (vEmp === "ALL" || e.name === vEmp) && (vBranch === "ALL" || e.branch === vBranch));
+
+    let fStart = document.getElementById("filterStartDate").value;
+    let fEnd = document.getElementById("filterEndDate").value;
+
+    let display = masterData.filter(e => {
+        let matchEmp = (vEmp === "ALL" || e.name === vEmp);
+        let matchBranch = (vBranch === "ALL" || e.branch === vBranch);
+
+        let matchDate = true;
+        if (fStart || fEnd) {
+            let rowDate = new Date(e.date);
+            if (fStart) {
+                let startDate = new Date(fStart);
+                if (rowDate < startDate) matchDate = false;
+            }
+            if (fEnd) {
+                let endDate = new Date(fEnd);
+                if (rowDate > endDate) matchDate = false;
+            }
+        }
+        return matchEmp && matchBranch && matchDate;
+    });
     let curE = "";
     display.forEach(e => {
         if (e.name !== curE) {

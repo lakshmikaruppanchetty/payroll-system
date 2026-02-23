@@ -348,7 +348,7 @@ function parseTimes(text) {
     let cleanedText = text.replace(/[l\|I]/g, '1').replace(/[oO]/g, '0').replace(/[sS]/g, '5');
     console.log("OCR Extracted Text:", cleanedText);
 
-    const timeRegex = /\b([0-1]?[0-9]|2[0-3])\s*[:;.]\s*([0-5][0-9])\s*([aApP][a-zA-Z]*|[aApP]\b)?\b/gi;
+    const timeRegex = /\b(1[0-2]|0?[1-9]|2[0-3])[\s:;.,_\-]*([0-5][0-9])\s*([aA][mM]?|[pP][mM]?)?\b/gi;
     let matched = [...cleanedText.matchAll(timeRegex)];
 
     return matched.map(m => {
@@ -356,8 +356,8 @@ function parseTimes(text) {
         let min = m[2];
         let suffix = m[3] ? m[3].toLowerCase() : '';
 
-        let isPM = suffix.includes('p');
-        let isAM = suffix.includes('a');
+        let isPM = suffix.startsWith('p');
+        let isAM = suffix.startsWith('a');
 
         let hNum = parseInt(h, 10);
         if (isPM && hNum < 12) hNum += 12;
@@ -387,8 +387,7 @@ async function runOCR(canvas) {
         if (matches.length >= 2) {
             applyAutofill(matches);
         } else {
-            let snippet = rawText.trim() ? rawText.substring(0, 200) : "[Blank Document / Unreadable Handwriting]";
-            alert("Could not detect clear shift timings from the document.\n\nWhat the AI parsed:\n" + snippet + "\n...\n\nPlease enter manually.");
+            alert("Could not detect clear shift timings from the document. Please enter manually.");
         }
     } catch (e) {
         document.getElementById('ocrToast')?.remove();

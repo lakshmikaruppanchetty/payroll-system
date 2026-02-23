@@ -55,6 +55,19 @@ class TestPayrollManagement(unittest.TestCase):
 
         self.assertTrue("Selenium Test User" in table_body.text, "Employee Name not found in row")
 
+    def test_feature_toggles(self):
+        driver = self.driver
+        driver.execute_script("switchTab('settings')")
+        time.sleep(1)
+        
+        # turn off a toggle to verify saveSettings throws no JS Errors
+        driver.execute_script("document.getElementById('toggleBranch').click()")
+        
+        logs = driver.get_log("browser")
+        for log in logs:
+            if log['level'] == 'SEVERE':
+                self.fail(f"JavaScript Error thrown during toggle: {log['message']}")
+
     def tearDown(self):
         if hasattr(self, 'driver'):
             self.driver.quit()

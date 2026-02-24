@@ -87,6 +87,9 @@ function applySettings() {
     const pdfCard = document.getElementById("pdfCard");
     const entryCard = document.getElementById("entryCard");
 
+    // UX: Shift Clock UI to the left if the PDF Card is disabled, otherwise let it center
+    entryCard.style.margin = appSettings.showPdf ? "0 auto" : "0";
+
     if (!appSettings.showPdf && !appSettings.showCsv) {
         topRow.appendChild(setupCard);
         botRow.appendChild(entryCard);

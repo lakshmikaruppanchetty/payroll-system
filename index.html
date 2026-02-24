@@ -40,7 +40,7 @@
 
     <div class="main-content" onclick="handleGlobalClick(event)">
         <div id="payrollView" class="view-section active">
-            <h2 style="text-align: center;">Payroll Management Tool v20.0</h2>
+            <h2 style="text-align: center;">Payroll Management Tool v20.3</h2>
 
             <button id="floatingDupBtn" onclick="duplicateSelected(event)">Duplicate Selected Record</button>
 
@@ -145,6 +145,9 @@
                 <button class="btn-primary" id="btnExportCsv"
                     style="background: #6c757d; margin: 0 0 0 15px; padding: 6px 12px; font-size: 13px;"
                     onclick="exportToExcel()">Export CSV</button>
+                <span id="backupReminder"
+                    style="color: #dc3545; font-size: 11px; margin-left: 8px; font-weight: bold; display: none;">⚠️
+                    Backup Overdue</span>
                 <button class="btn-primary" id="btnExportPdf"
                     style="background: #17a2b8; margin: 0 0 0 10px; padding: 6px 12px; font-size: 13px;"
                     onclick="exportToPDF()">Generate PDF</button>
@@ -188,7 +191,22 @@
                             <th>Primary Branch</th>
                             <th>Total Hours</th>
                             <th>Gross Pay</th>
+                            <th>Pay Stub</th>
                             <th>Clear History</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+
+                <div class="section-header" style="margin-top: 30px;" id="branchSummaryHeader">Branch Performance<span
+                        class="tooltip-icon" style="margin-left: 10px;">i<span class="tooltip-text">A summary of total
+                            aggregate hours and gross pay organized by company branch.</span></span></div>
+                <table id="branchSummaryTable">
+                    <thead>
+                        <tr>
+                            <th>Branch</th>
+                            <th>Total Hours</th>
+                            <th>Total Pay</th>
                         </tr>
                     </thead>
                     <tbody></tbody>
@@ -320,7 +338,7 @@
                 <h3
                     style="margin-top: 0; color: #007bff; border-bottom: 2px solid #007bff; padding-bottom: 5px; display: inline-block;">
                     Platform Overview</h3>
-                <p style="line-height: 1.6; font-size: 14px; color: #444;">The Payroll Management System v20.0 is a
+                <p style="line-height: 1.6; font-size: 14px; color: #444;">The Payroll Management System v20.3 is a
                     highly intuitive, secure, and privacy-first static web application tailored for robust business
                     operations. It computes exclusively on your local hardware securely.</p>
 
@@ -347,7 +365,7 @@
                         representing Gross Pay and Total Hours, completely auto-calculated with active data boundaries.
                     </li>
                 </ul>
-                <p style="text-align: center; margin-top: 35px; color: #aaa; font-size: 11px;">Version 20.0 • Built with
+                <p style="text-align: center; margin-top: 35px; color: #aaa; font-size: 11px;">Version 20.3 • Built with
                     HTML5 + Frontend Javascript</p>
             </div>
         </div>

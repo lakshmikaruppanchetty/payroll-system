@@ -13,6 +13,7 @@ appSettings.ocrEngine = appSettings.ocrEngine ?? 'free';
 appSettings.llmApiKey = appSettings.llmApiKey ?? '';
 appSettings.geminiApiKey = appSettings.geminiApiKey ?? '';
 appSettings.securityPin = appSettings.securityPin ?? '1234';
+appSettings.lastBackupDate = appSettings.lastBackupDate ?? null;
 let editingId = null; let selectedId = null;
 
 window.renderRates = function () {
@@ -43,6 +44,7 @@ window.onload = function () {
     renderRates();
     applySettings();
     toggleClockFormat(); renderAll();
+    if (typeof renderBackupReminder === "function") renderBackupReminder();
 };
 
 function saveSettings() {
@@ -145,6 +147,8 @@ function handleLogoUpload() {
         const reader = new FileReader();
         reader.onload = function (e) {
             appSettings.companyLogo = e.target.result;
+            const display = document.getElementById("sidebarLogo");
+            if (display) display.src = e.target.result;
             saveSettings();
         };
         reader.readAsDataURL(file);
@@ -212,7 +216,22 @@ window.addEntry = function () {
 
     if (!name || !date || !branch) return alert("Fill Name, Date" + (appSettings.showBranch ? ", and Branch." : "."));
     const dup = masterData.find(e => e.name === name && e.date === date);
-    if (dup && editingId !== dup.id) { if (confirm(`Existing record on ${date}. Edit?`)) editEntry(dup.id); return; }
+    if (dup && editingId !== dup.id) {
+        if (dup.branch !== branch) {
+            if (confirm(`Employee "${name}" already has a shift on ${date} at branch [${dup.branch}].\nDo you want to MERGE these new shifts into that existing record?\n(Click Cancel to create a separate shift log for branch [${branch}])`)) {
+                const ns1s = document.getElementById("s1start").value;
+                const ns1e = document.getElementById("s1end").value;
+                if (!dup.s2s && ns1s) { dup.s2s = ns1s; dup.s2e = ns1e; }
+                else if (!dup.s3s && ns1s) { dup.s3s = ns1s; dup.s3e = ns1e; }
+                dup.total = calcH(dup.s1s, dup.s1e) + calcH(dup.s2s, dup.s2e) + calcH(dup.s3s, dup.s3e);
+                dup.pay = (dup.total * dup.rate).toFixed(2);
+                localStorage.setItem("payroll_v20", JSON.stringify(masterData));
+                resetShifts(); renderAll(); return;
+            }
+        } else {
+            if (confirm(`Existing record on ${date}. Edit?`)) editEntry(dup.id); return;
+        }
+    }
     if (editingId && !confirm(`Update record?`)) return;
     const h = calcH(document.getElementById("s1start").value, document.getElementById("s1end").value) + calcH(document.getElementById("s2start").value, document.getElementById("s2end").value) + calcH(document.getElementById("s3start").value, document.getElementById("s3end").value);
     const rate = parseFloat(document.getElementById("hourlyRate").value);
@@ -228,7 +247,20 @@ window.importCSV = function () {
     reader.onload = function (e) {
         try {
             const rows = e.target.result.split(/\r?\n/).filter(r => r.trim()); let aC = 0, uC = 0;
+
+            let isNewFormat = false;
+            if (rows.length > 1) {
+                const firstDataCols = rows[1].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                if (firstDataCols[0] && firstDataCols[0].replace(/"/g, '').trim().includes('-') && firstDataCols[0].replace(/"/g, '').trim().length === 10) {
+                    isNewFormat = true;
+                }
+            }
+
+            let askMerge = null;
+
             for (let i = 1; i < rows.length; i++) {
+                if (rows[i].includes("Summary Data") || rows[i].includes("Employee,Branch,")) continue;
+
                 const cols = [];
                 let inQuotes = false, current = "";
                 for (let j = 0; j < rows[i].length; j++) {
@@ -240,15 +272,56 @@ window.importCSV = function () {
                 cols.push(current);
                 if (cols.length < 5) continue;
                 const clean = (v) => v ? v.replace(/"/g, '').trim() : "";
-                const name = clean(cols[0]), rate = parseFloat(clean(cols[1])), date = clean(cols[2]), branch = clean(cols[8]) || "Branch A";
-                const s1 = clean(cols[3]).split('-'), s2 = clean(cols[4]).split('-'), s3 = clean(cols[5]).split('-');
+
+                let name, rate, date, branch, s1, s2, s3;
+                if (isNewFormat) {
+                    date = clean(cols[0]);
+                    name = clean(cols[1]);
+                    branch = clean(cols[2]) || "Branch A";
+                    s1 = clean(cols[3]).split('-');
+                    s2 = clean(cols[4]).split('-');
+                    s3 = clean(cols[5]).split('-');
+                    let r = clean(cols[7]);
+                    if (r && r.startsWith('$')) r = r.substring(1);
+                    rate = parseFloat(r) || 0;
+                } else {
+                    name = clean(cols[0]);
+                    rate = parseFloat(clean(cols[1])) || 0;
+                    date = clean(cols[2]);
+                    s1 = clean(cols[3]).split('-');
+                    s2 = clean(cols[4]).split('-');
+                    s3 = clean(cols[5]).split('-');
+                    branch = clean(cols[8]) || "Branch A";
+                }
+
                 const h = calcH(s1[0], s1[1]) + calcH(s2[0], s2[1]) + calcH(s3[0], s3[1]);
                 const entry = { id: Date.now() + i, name, date, branch, s1s: s1[0] || "", s1e: s1[1] || "", s2s: s2[0] || "", s2e: s2[1] || "", s3s: s3[0] || "", s3e: s3[1] || "", total: h, rate, pay: (h * rate).toFixed(2) };
-                const exIdx = masterData.findIndex(ex => ex.name === name && ex.date === date && ex.branch === branch);
-                if (exIdx > -1) { masterData[exIdx] = entry; uC++; } else { masterData.push(entry); aC++; }
+
+                const exIdx = masterData.findIndex(ex => ex.name === name && ex.date === date);
+                if (exIdx > -1) {
+                    if (masterData[exIdx].branch !== branch) {
+                        if (askMerge === null) {
+                            askMerge = confirm(`CSV contains overlapping dates on different branches. Do you want to MERGE overlapping shifts into single entries? (Cancel generates separate rows per branch)`);
+                        }
+                        if (askMerge) {
+                            let old = masterData[exIdx];
+                            if (!old.s2s && s1[0]) { old.s2s = s1[0] || ""; old.s2e = s1[1] || ""; }
+                            else if (!old.s3s && s1[0]) { old.s3s = s1[0] || ""; old.s3e = s1[1] || ""; }
+                            old.total = calcH(old.s1s, old.s1e) + calcH(old.s2s, old.s2e) + calcH(old.s3s, old.s3e);
+                            old.pay = (old.total * old.rate).toFixed(2);
+                            uC++;
+                        } else {
+                            masterData.push(entry); aC++;
+                        }
+                    } else {
+                        masterData[exIdx] = entry; uC++;
+                    }
+                } else {
+                    masterData.push(entry); aC++;
+                }
             }
-            localStorage.setItem("payroll_v20", JSON.stringify(masterData)); renderAll(); alert(`Synced: ${aC} new, ${uC} updated.`);
-        } catch (e) { alert("Format Error."); }
+            localStorage.setItem("payroll_v20", JSON.stringify(masterData)); renderAll(); alert(`Synced: ${aC} new, ${uC} updated/merged.`);
+        } catch (e) { alert("Format Error: " + e.message); }
         fileInput.value = '';
     }; reader.readAsText(fileInput.files[0]);
 };
@@ -316,8 +389,20 @@ window.renderAll = function () {
     });
     emps.forEach(n => {
         let ent = masterData.filter(x => x.name === n); let h = ent.reduce((s, c) => s + c.total, 0), p = ent.reduce((s, c) => s + parseFloat(c.pay), 0);
-        summaryBody.innerHTML += `<tr style="background:#e8f5e9; font-weight:bold;"><td>${n}</td><td>${ent[0].branch}</td><td>${decToT(h)}</td><td>$${p.toFixed(2)}</td><td><button class="btn-danger-x" onclick="deleteEmployeeBulk('${n}')">Clear All</button></td></tr>`;
+        summaryBody.innerHTML += `<tr style="background:#e8f5e9; font-weight:bold;"><td>${n}</td><td>${ent[0].branch}</td><td>${decToT(h)}</td><td>$${p.toFixed(2)}</td><td><button class="btn-primary" style="padding: 4px 8px; font-size: 11px; background:#17a2b8;" onclick="generatePayStub('${n}')">📄 PDF</button></td><td><button class="btn-danger-x" onclick="deleteEmployeeBulk('${n}')">Clear All</button></td></tr>`;
     });
+
+    const branchSummaryBody = document.querySelector("#branchSummaryTable tbody");
+    if (branchSummaryBody) {
+        branchSummaryBody.innerHTML = "";
+        branches.forEach(b => {
+            let ent = masterData.filter(x => x.branch === b);
+            if (ent.length > 0) {
+                let h = ent.reduce((s, c) => s + c.total, 0), p = ent.reduce((s, c) => s + parseFloat(c.pay), 0);
+                branchSummaryBody.innerHTML += `<tr><td>${b}</td><td>${decToT(h)}</td><td>$${p.toFixed(2)}</td></tr>`;
+            }
+        });
+    }
 
     const finalBranchFilter = document.getElementById("branchFilter").value;
     const clearBtn = document.getElementById("btnClearDatabase");
@@ -336,10 +421,15 @@ window.checkExistingShifts = function () {
     const name = document.getElementById("empName").value, date = document.getElementById("workDate").value; if (!name || !date) return;
     const e = masterData.find(x => x.name === name && x.date === date);
     if (e) {
+        if (editingId && editingId === e.id) return;
         document.getElementById("s1start").value = e.s1s; document.getElementById("s1end").value = e.s1e; document.getElementById("s2start").value = e.s2s; document.getElementById("s2end").value = e.s2e; document.getElementById("s3start").value = e.s3s; document.getElementById("s3end").value = e.s3e;
         document.getElementById("hourlyRate").value = e.rate; document.getElementById("branchName").value = e.branch;
         editingId = e.id; document.getElementById("mainBtn").innerText = "Update Log";
-    } else { editingId = null; document.getElementById("mainBtn").innerText = "Save / Update Log"; }
+    } else {
+        if (!editingId) {
+            document.getElementById("mainBtn").innerText = "Save / Update Log";
+        }
+    }
 };
 
 window.executeBulkUpdate = function () {
@@ -375,7 +465,19 @@ window.toggleClockFormat = function () {
 function setupMasks() { document.querySelectorAll('.time-input-24').forEach(i => { i.addEventListener('input', (e) => { let v = e.target.value.replace(/\D/g, ''); if (v.length >= 3) e.target.value = v.slice(0, 2) + ":" + v.slice(2, 4); else e.target.value = v; }); }); }
 
 window.resetShifts = function () { ["s1start", "s1end", "s2start", "s2end", "s3start", "s3end"].forEach(id => { if (document.getElementById(id)) document.getElementById(id).value = ""; }); editingId = null; document.getElementById("workDate").value = ""; document.getElementById("mainBtn").innerText = "Save / Update Log"; };
-window.updateNameFromDropdown = function () { const s = document.getElementById("empSelect"); if (s.value !== "") { document.getElementById("empName").value = s.value; checkExistingShifts(); renderAll(); } };
+window.updateNameFromDropdown = function () {
+    const s = document.getElementById("empSelect");
+    if (s.value !== "") {
+        document.getElementById("empName").value = s.value;
+        const e = [...masterData].reverse().find(x => x.name === s.value);
+        if (e && e.branch) {
+            document.getElementById("branchName").value = e.branch;
+            if (document.getElementById("branchSelectDropdown")) document.getElementById("branchSelectDropdown").value = e.branch;
+        }
+        checkExistingShifts();
+        renderAll();
+    }
+};
 window.updateBranchFromDropdown = function () { const s = document.getElementById("branchSelectDropdown"); if (s.value !== "") { document.getElementById("branchName").value = s.value; renderAll(); } };
 window.deleteEntry = function (id) { if (confirm("Delete day?")) { masterData = masterData.filter(e => e.id !== id); localStorage.setItem("payroll_v20", JSON.stringify(masterData)); renderAll(); } };
 window.deleteEmployeeBulk = function (n) { if (confirm("Clear history for " + n + "?")) { masterData = masterData.filter(e => e.name !== n); localStorage.setItem("payroll_v20", JSON.stringify(masterData)); renderAll(); } };
@@ -431,6 +533,10 @@ window.exportToExcel = function () {
         let p = ent.reduce((s, c) => s + parseFloat(c.pay), 0);
         csv += `"${n}","${ent[0].branch}",${decToT(h)},${p.toFixed(2)}\n`;
     });
+
+    appSettings.lastBackupDate = Date.now();
+    saveSettings();
+    if (typeof renderBackupReminder === "function") renderBackupReminder();
 
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
@@ -752,3 +858,98 @@ async function callGemini(canvas) {
         alert("Failed to communicate with Gemini API. Ensure your API key is correct.");
     }
 }
+
+window.renderBackupReminder = function () {
+    const reminder = document.getElementById("backupReminder");
+    if (!reminder) return;
+    if (!appSettings.lastBackupDate) {
+        reminder.style.display = "inline";
+    } else {
+        const daysSince = (Date.now() - appSettings.lastBackupDate) / (1000 * 60 * 60 * 24);
+        if (daysSince > 7) {
+            reminder.style.display = "inline";
+        } else {
+            reminder.style.display = "none";
+        }
+    }
+};
+
+window.generatePayStub = function (employeeName) {
+    let ent = masterData.filter(x => x.name === employeeName);
+    if (ent.length === 0) return alert("No records for this employee.");
+
+    // Check global filters to only include visible shifts
+    const sD = document.getElementById("filterStartDate").value;
+    const eD = document.getElementById("filterEndDate").value;
+    if (sD) ent = ent.filter(e => e.date >= sD);
+    if (eD) ent = ent.filter(e => e.date <= eD);
+
+    if (ent.length === 0) return alert("No records for this employee in the selected date range.");
+
+    let h = ent.reduce((s, c) => s + c.total, 0);
+    let p = ent.reduce((s, c) => s + parseFloat(c.pay), 0);
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    let currentY = 15;
+
+    if (appSettings.companyLogo) {
+        try {
+            doc.addImage(appSettings.companyLogo, 'PNG', 14, currentY, 40, 40, '', 'FAST');
+            currentY += 45;
+        } catch (e) {
+            console.error("Logo inject failed:", e);
+        }
+    }
+
+    doc.setFontSize(22);
+    doc.text("Professional Pay Statement", 14, currentY);
+    currentY += 10;
+
+    doc.setFontSize(12);
+    doc.text(`Employee Name: ${employeeName}`, 14, currentY);
+    currentY += 7;
+    doc.text(`Branch: ${ent[0].branch}`, 14, currentY);
+    currentY += 7;
+    const dateStr = new Date().toLocaleDateString();
+    doc.text(`Generated on: ${dateStr}`, 14, currentY);
+    currentY += 7;
+    if (sD || eD) {
+        doc.text(`Pay Period: ${sD || 'Beginning'} to ${eD || 'Present'}`, 14, currentY);
+        currentY += 7;
+    }
+
+    currentY += 5;
+
+    const tableHeaders = [["Date", "Shifts", "Daily Hrs", "Rate", "Daily Pay"]];
+    const tableRows = ent.map(d => [
+        d.date,
+        `${d.s1s}-${d.s1e}${d.s2s ? ', ' + d.s2s + '-' + d.s2e : ''}${d.s3s ? ', ' + d.s3s + '-' + d.s3e : ''}`,
+        decToT(d.total),
+        `$${d.rate}`,
+        `$${d.pay}`
+    ]);
+
+    doc.autoTable({
+        startY: currentY,
+        head: tableHeaders,
+        body: tableRows,
+        theme: 'striped',
+        styles: { fontSize: 10 },
+        headStyles: { fillColor: [40, 167, 69] }
+    });
+
+    currentY = doc.lastAutoTable.finalY + 15;
+
+    doc.setFontSize(14);
+    doc.text("Summary Totals", 14, currentY);
+    currentY += 8;
+    doc.setFontSize(12);
+    doc.text(`Total Hours Worked: ${decToT(h)}`, 14, currentY);
+    currentY += 7;
+    doc.setFontSize(14);
+    doc.text(`Gross Pay: $${p.toFixed(2)}`, 14, currentY);
+
+    doc.save(`PayStub_${employeeName.replace(/\s+/g, '_')}.pdf`);
+};

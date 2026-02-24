@@ -57,16 +57,50 @@ class TestPayrollManagement(unittest.TestCase):
 
     def test_feature_toggles(self):
         driver = self.driver
-        driver.execute_script("switchTab('settings')")
-        time.sleep(1)
+        features = [
+            ("toggleBranch", "branchSelectDropdown"),
+            ("toggleSummary", "summaryTableSection"),
+            ("togglePdf", "pdfCard"),
+            ("toggleCsv", "csvCard"),
+            ("toggleExportPdf", "btnExportPdf")
+        ]
         
-        # turn off a toggle to verify saveSettings throws no JS Errors
-        driver.execute_script("document.getElementById('toggleBranch').click()")
-        
+        for toggle_id, target_id in features:
+            # Go to settings
+            driver.execute_script("switchTab('settings')")
+            time.sleep(0.5)
+            
+            toggle = driver.find_element(By.ID, toggle_id)
+            # Ensure it's toggled off
+            if toggle.is_selected():
+                driver.execute_script("arguments[0].click();", toggle)
+                
+            # Verify UI after turning off
+            driver.execute_script("switchTab('payroll')")
+            time.sleep(0.5)
+            element = driver.find_element(By.ID, target_id)
+            self.assertEqual(element.value_of_css_property('display'), 'none', f"{target_id} should be hidden when {toggle_id} is off")
+            
+            # Go back and turn it on
+            driver.execute_script("switchTab('settings')")
+            time.sleep(0.5)
+            
+            toggle = driver.find_element(By.ID, toggle_id)
+            if not toggle.is_selected():
+                driver.execute_script("arguments[0].click();", toggle)
+                
+            # Verify UI after turning on
+            driver.execute_script("switchTab('payroll')")
+            time.sleep(0.5)
+            
+            element = driver.find_element(By.ID, target_id)
+            self.assertNotEqual(element.value_of_css_property('display'), 'none', f"{target_id} should be visible when {toggle_id} is on")
+            
+        # Verify no severe JS errors occurred during toggles
         logs = driver.get_log("browser")
         for log in logs:
             if log['level'] == 'SEVERE':
-                self.fail(f"JavaScript Error thrown during toggle: {log['message']}")
+                self.fail(f"JavaScript Error thrown during toggles: {log['message']}")
 
     def tearDown(self):
         if hasattr(self, 'driver'):

@@ -43,7 +43,8 @@ window.renderRates = function () {
 window.onload = function () {
     renderRates();
     applySettings();
-    toggleClockFormat(); renderAll();
+    toggleClockFormat(); 
+    applyDatePreset();
     if (typeof renderBackupReminder === "function") renderBackupReminder();
 };
 
@@ -184,8 +185,47 @@ window.handleGlobalClick = function (e) {
 };
 
 window.clearDateFilter = function () {
+    document.getElementById("dateFilterPreset").value = "custom";
+    document.getElementById("customDateInputs").style.display = "flex";
     document.getElementById("filterStartDate").value = "";
     document.getElementById("filterEndDate").value = "";
+    renderAll();
+};
+
+window.applyDatePreset = function () {
+    const preset = document.getElementById("dateFilterPreset").value;
+    const customInputs = document.getElementById("customDateInputs");
+    const startDate = document.getElementById("filterStartDate");
+    const endDate = document.getElementById("filterEndDate");
+
+    const formatDate = (date) => {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    };
+
+    const now = new Date();
+    
+    if (preset === "today") {
+        customInputs.style.display = "none";
+        startDate.value = formatDate(now);
+        endDate.value = formatDate(now);
+    } else if (preset === "current_month") {
+        customInputs.style.display = "none";
+        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+        const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        startDate.value = formatDate(firstDay);
+        endDate.value = formatDate(lastDay);
+    } else if (preset === "last_month") {
+        customInputs.style.display = "none";
+        const firstDay = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const lastDay = new Date(now.getFullYear(), now.getMonth(), 0);
+        startDate.value = formatDate(firstDay);
+        endDate.value = formatDate(lastDay);
+    } else if (preset === "custom") {
+        customInputs.style.display = "flex";
+    }
     renderAll();
 };
 
@@ -387,16 +427,20 @@ window.renderAll = function () {
         const brCell = appSettings.showBranch ? `<td>${e.branch}</td>` : '<td style="display:none"></td>';
         dailyBody.innerHTML += `<tr ${selectedId === e.id ? 'class="selected"' : ''} onclick="selectRow(${e.id}, event)"><td>${d}</td>${brCell}<td>${e.s1s}-${e.s1e}</td><td>${e.s2s}-${e.s2e}</td><td style="display:${hasS3 ? '' : 'none'}">${e.s3s ? e.s3s + '-' + e.s3e : '-'}</td><td>${decToT(e.total)}</td><td>$${e.rate}</td><td>$${e.pay}</td><td><button class="btn-edit-small" onclick="event.stopPropagation(); editEntry(${e.id})">Edit</button><button class="btn-danger-x" onclick="event.stopPropagation(); deleteEntry(${e.id})">×</button></td></tr>`;
     });
-    emps.forEach(n => {
-        let ent = masterData.filter(x => x.name === n); let h = ent.reduce((s, c) => s + c.total, 0), p = ent.reduce((s, c) => s + parseFloat(c.pay), 0);
-        summaryBody.innerHTML += `<tr style="background:#e8f5e9; font-weight:bold;"><td>${n}</td><td>${ent[0].branch}</td><td>${decToT(h)}</td><td>$${p.toFixed(2)}</td><td><button class="btn-primary" style="padding: 4px 8px; font-size: 11px; background:#17a2b8;" onclick="generatePayStub('${n}')">📄 PDF</button></td><td><button class="btn-danger-x" onclick="deleteEmployeeBulk('${n}')">Clear All</button></td></tr>`;
+    const filteredEmps = [...new Set(display.map(e => e.name))];
+    filteredEmps.forEach(n => {
+        let ent = display.filter(x => x.name === n); let h = ent.reduce((s, c) => s + c.total, 0), p = ent.reduce((s, c) => s + parseFloat(c.pay), 0);
+        if (ent.length > 0) {
+            summaryBody.innerHTML += `<tr style="background:#e8f5e9; font-weight:bold;"><td>${n}</td><td>${ent[0].branch}</td><td>${decToT(h)}</td><td>$${p.toFixed(2)}</td><td><button class="btn-primary" style="padding: 4px 8px; font-size: 11px; background:#17a2b8;" onclick="generatePayStub('${n}')">📄 PDF</button></td><td><button class="btn-danger-x" onclick="deleteEmployeeBulk('${n}')">Clear All</button></td></tr>`;
+        }
     });
 
     const branchSummaryBody = document.querySelector("#branchSummaryTable tbody");
     if (branchSummaryBody) {
         branchSummaryBody.innerHTML = "";
-        branches.forEach(b => {
-            let ent = masterData.filter(x => x.branch === b);
+        const filteredBranches = [...new Set(display.map(e => e.branch))];
+        filteredBranches.forEach(b => {
+            let ent = display.filter(x => x.branch === b);
             if (ent.length > 0) {
                 let h = ent.reduce((s, c) => s + c.total, 0), p = ent.reduce((s, c) => s + parseFloat(c.pay), 0);
                 branchSummaryBody.innerHTML += `<tr><td>${b}</td><td>${decToT(h)}</td><td>$${p.toFixed(2)}</td></tr>`;

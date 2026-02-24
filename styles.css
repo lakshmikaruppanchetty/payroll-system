@@ -434,3 +434,96 @@
             visibility: visible;
             opacity: 1;
         }
+
+        /* --- Global Responsive Adjustments --- */
+        @media screen and (max-width: 768px) {
+            body {
+                flex-direction: column;
+                height: auto;
+                overflow: auto;
+            }
+
+            .sidebar {
+                width: 100%;
+                padding: 10px;
+                box-sizing: border-box;
+                position: static;
+                text-align: center;
+                flex-direction: row;
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 5px;
+            }
+
+            .sidebar.collapsed {
+                width: 100%;
+                padding: 10px;
+            }
+
+            .sidebar-menu {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 10px;
+            }
+
+            .sidebar-menu li {
+                margin-bottom: 0;
+            }
+
+            .sidebar-toggle {
+                display: none;
+            }
+
+            #logoContainer {
+                width: 100%;
+                margin-bottom: 10px;
+            }
+
+            .main-content {
+                padding: 10px;
+                overflow-y: visible;
+            }
+
+            .flex-container {
+                flex-direction: column;
+            }
+
+            .card {
+                min-width: 100%;
+                margin-right: 0 !important;
+                margin-left: 0 !important;
+            }
+
+            .filter-container {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .filter-container select, .filter-container input {
+                width: 100% !important;
+                margin-bottom: 10px;
+                margin-left: 0 !important;
+            }
+
+            .filter-container button, .filter-container span {
+                margin: 5px 0 5px 0 !important;
+                width: 100%;
+            }
+
+            /* Responsive Tables with horizontal scrolling */
+            #payrollView > table, 
+            #dailyTable, 
+            #summaryTable, 
+            #branchSummaryTable {
+                display: block;
+                width: 100%;
+                overflow-x: auto;
+                white-space: nowrap;
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            #pdfViewer {
+                height: 350px;
+            }
+        }

@@ -43,7 +43,7 @@ window.renderRates = function () {
 window.onload = function () {
     renderRates();
     applySettings();
-    toggleClockFormat(); 
+    toggleClockFormat();
     applyDatePreset();
     if (typeof renderBackupReminder === "function") renderBackupReminder();
 };
@@ -206,7 +206,7 @@ window.applyDatePreset = function () {
     };
 
     const now = new Date();
-    
+
     if (preset === "today") {
         customInputs.style.display = "none";
         startDate.value = formatDate(now);
@@ -278,6 +278,24 @@ window.addEntry = function () {
     const entry = { id: editingId || Date.now(), name, date, branch, s1s: document.getElementById("s1start").value, s1e: document.getElementById("s1end").value, s2s: document.getElementById("s2start").value, s2e: document.getElementById("s2end").value, s3s: document.getElementById("s3start").value, s3e: document.getElementById("s3end").value, total: h, rate, pay: (h * rate).toFixed(2) };
     if (editingId) masterData = masterData.filter(e => e.id !== editingId);
     masterData.push(entry); localStorage.setItem("payroll_v20", JSON.stringify(masterData));
+
+    // Automatically ensure the newly saved entry is visible in the current filter bounds
+    let sD = document.getElementById("filterStartDate").value;
+    let eD = document.getElementById("filterEndDate").value;
+    let empF = document.getElementById("viewFilter").value;
+    let brF = document.getElementById("branchFilter").value;
+    let changedFilter = false;
+
+    if (sD && date < sD) { document.getElementById("filterStartDate").value = date; changedFilter = true; }
+    if (eD && date > eD) { document.getElementById("filterEndDate").value = date; changedFilter = true; }
+    if (empF !== "ALL" && empF !== name) { document.getElementById("viewFilter").value = "ALL"; changedFilter = true; }
+    if (brF !== "ALL" && brF !== branch) { document.getElementById("branchFilter").value = "ALL"; changedFilter = true; }
+
+    if (changedFilter) {
+        document.getElementById("dateFilterPreset").value = "custom";
+        document.getElementById("customDateInputs").style.display = "flex";
+    }
+
     editingId = null; resetShifts(); renderAll();
 };
 

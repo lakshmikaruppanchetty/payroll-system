@@ -131,9 +131,10 @@
                 </div>
             </div>
 
-            <div class="section-header">Live Activity Log<span class="tooltip-icon" style="margin-left: 10px;">i<span
-                        class="tooltip-text">View all created shifts chronologically. Filter by employees or specific
-                        branches to isolate records.</span></span></div>
+            <div class="section-header" style="margin-top: 20px;">Global Data Filters & Exports<span
+                    class="tooltip-icon" style="margin-left: 10px;">i<span class="tooltip-text">These powerful filters
+                        apply globally to the Activity Log, Employee Summary, and Branch Performance tables
+                        below.</span></span></div>
             <div class="filter-container" style="flex-wrap: wrap; align-items: center;">
                 <label>Filter Employee:</label><select id="viewFilter" onchange="renderAll()" style="width: 180px;">
                     <option value="ALL">All Employees</option>
@@ -175,6 +176,9 @@
                 </div>
             </div>
 
+            <div class="section-header" style="margin-top: 25px;">Live Activity Log<span class="tooltip-icon"
+                    style="margin-left: 10px;">i<span class="tooltip-text">View all created shifts chronologically,
+                        filtered by the global options above.</span></span></div>
             <table id="dailyTable">
                 <thead>
                     <tr>

@@ -491,9 +491,10 @@ window.checkExistingShifts = function () {
         document.getElementById("hourlyRate").value = e.rate; document.getElementById("branchName").value = e.branch;
         editingId = e.id; document.getElementById("mainBtn").innerText = "Update Log";
     } else {
-        if (!editingId) {
-            document.getElementById("mainBtn").innerText = "Save / Update Log";
-        }
+        // Clear old timings since there's no entry for this date
+        ["s1start", "s1end", "s2start", "s2end", "s3start", "s3end"].forEach(id => { if (document.getElementById(id)) document.getElementById(id).value = ""; });
+        editingId = null;
+        document.getElementById("mainBtn").innerText = "Save / Update Log";
     }
 };
 

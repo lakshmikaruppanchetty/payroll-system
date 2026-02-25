@@ -510,7 +510,7 @@ window.renderAll = function () {
     filteredEmps.forEach(n => {
         let ent = display.filter(x => x.name === n); let h = ent.reduce((s, c) => s + c.total, 0), p = ent.reduce((s, c) => s + parseFloat(c.pay), 0);
         if (ent.length > 0) {
-            summaryBody.innerHTML += `<tr style="background:#e8f5e9; font-weight:bold;"><td style="text-align:left; padding-left:15px;">${n}</td><td>${ent[0].branch}</td><td>${decToT(h)}</td><td>$${p.toFixed(2)}</td><td><button class="btn-primary" style="padding: 4px 8px; font-size: 11px; background:#17a2b8;" onclick="generatePayStub('${n}')">📄 PDF</button></td><td><button class="btn-danger-x" onclick="deleteEmployeeBulk('${n}')">Clear All</button></td></tr>`;
+            summaryBody.innerHTML += `<tr style="background:#e8f5e9; font-weight:bold;"><td style="text-align:left; padding-left:15px;">${n}</td><td style="text-align:left; padding-left:15px;">${ent[0].branch}</td><td>${decToT(h)}</td><td>$${p.toFixed(2)}</td><td><button class="btn-primary" style="padding: 4px 8px; font-size: 11px; background:#17a2b8;" onclick="generatePayStub('${n}')">📄 PDF</button></td><td><button class="btn-danger-x" onclick="deleteEmployeeBulk('${n}')">Clear All</button></td></tr>`;
         }
     });
 
@@ -573,6 +573,7 @@ function renderCharts(filteredEmps, displayData) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            layout: { padding: { right: 20 } },
             scales: { y: { beginAtZero: true } },
             plugins: {
                 legend: {
@@ -629,6 +630,7 @@ function renderCharts(filteredEmps, displayData) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            layout: { padding: { right: 20 } },
             plugins: {
                 legend: {
                     display: true,

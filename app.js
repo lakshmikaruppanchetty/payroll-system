@@ -655,9 +655,15 @@ window.toggleExpandChart = function (cardId) {
 
     // Allow ChartJS to natively auto-resize 
     setTimeout(() => {
-        if (employeeChartInstance) employeeChartInstance.resize();
-        if (branchChartInstance) branchChartInstance.resize();
-    }, 50);
+        if (employeeChartInstance) {
+            employeeChartInstance.resize();
+            employeeChartInstance.update();
+        }
+        if (branchChartInstance) {
+            branchChartInstance.resize();
+            branchChartInstance.update();
+        }
+    }, 100);
 };
 
 window.closeExpandedChart = function () {
@@ -666,9 +672,15 @@ window.closeExpandedChart = function () {
     if (overlay) overlay.style.display = 'none';
 
     setTimeout(() => {
-        if (employeeChartInstance) employeeChartInstance.resize();
-        if (branchChartInstance) branchChartInstance.resize();
-    }, 50);
+        if (employeeChartInstance) {
+            employeeChartInstance.resize();
+            employeeChartInstance.update();
+        }
+        if (branchChartInstance) {
+            branchChartInstance.resize();
+            branchChartInstance.update();
+        }
+    }, 100);
 };
 
 window.checkExistingShifts = function () {

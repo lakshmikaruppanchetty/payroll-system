@@ -43,7 +43,7 @@
 
     <div class="main-content" onclick="handleGlobalClick(event)">
         <div id="payrollView" class="view-section active">
-            <h2 style="text-align: center;">Payroll Management Tool v20.3</h2>
+            <h2 style="text-align: center;">Payroll Management Tool v20.4</h2>
 
             <button id="floatingDupBtn" onclick="duplicateSelected(event)">Duplicate Selected Record</button>
 
@@ -216,7 +216,7 @@
                 <div class="card clickable-chart" style="flex: 1; cursor: pointer; transition: transform 0.2s;"
                     id="employeeGraphCard" onclick="toggleExpandChart('employeeGraphCard')" title="Click to Expand">
                     <h3 style="text-align: center; margin-top: 0; margin-bottom: 15px;">Day vs Hours Worked 🔍</h3>
-                    <div style="position: relative; height: 300px; width: 100%;">
+                    <div class="chart-container" style="position: relative; height: 300px; width: 100%;">
                         <canvas id="employeeGraph"></canvas>
                     </div>
                 </div>
@@ -224,7 +224,7 @@
                     id="branchGraphCard" onclick="toggleExpandChart('branchGraphCard')" title="Click to Expand">
                     <h3 style="text-align: center; margin-top: 0; margin-bottom: 15px;">Branch Performance (Total Pay)
                         🔍</h3>
-                    <div style="position: relative; height: 300px; width: 100%;">
+                    <div class="chart-container" style="position: relative; height: 300px; width: 100%;">
                         <canvas id="branchGraph"></canvas>
                     </div>
                 </div>
@@ -385,13 +385,11 @@
 
         <div id="aboutView" class="view-section">
             <h2 style="text-align: center;">About Payroll Management System</h2>
-            <div class="card"
-                style="margin-bottom: 20px; max-width: 800px; margin-left: auto; margin-right: auto; padding: 25px;">
-                <h3
-                    style="margin-top: 0; color: #007bff; border-bottom: 2px solid #007bff; padding-bottom: 5px; display: inline-block;">
-                    Platform Overview</h3>
-                <p style="line-height: 1.6; font-size: 14px; color: #444;">The Payroll Management System v20.3 is a
-                    highly intuitive, secure, and privacy-first static web application tailored for robust business
+            <div class="card" style="margin: 0 auto; max-width: 600px; text-align: left; padding: 40px;">
+                <h3 style="margin-top: 0;">About This Software</h3>
+                <p style="line-height: 1.6; font-size: 14px; color: #444;">The Payroll Management System v20.4 is a
+                    client-side web application designed to track shift logs, aggregate employee performance, calculated
+                    for robust business
                     operations. It computes exclusively on your local hardware securely.</p>
 
                 <h4 style="color: #333; margin-top: 25px; font-weight: 700;">🔹 Core Architectures & Features</h4>
@@ -417,13 +415,18 @@
                         representing Gross Pay and Total Hours, completely auto-calculated with active data boundaries.
                     </li>
                 </ul>
-                <p style="text-align: center; margin-top: 35px; color: #aaa; font-size: 11px;">Version 20.3 • Built with
+                <p style="text-align: center; margin-top: 35px; color: #aaa; font-size: 11px;">Version 20.4 • Built with
                     HTML5 + Frontend Javascript</p>
             </div>
         </div>
     </div>
 
-    <script src="app.js?v=20.4"></script>
+    <div style="position: fixed; bottom: 10px; left: 0; width: 100%; text-align: center; font-size: 12px; color: #888; pointer-events: none; z-index: 9999;"
+        id="globalFooter">
+        Payroll Management System v20.4
+    </div>
+
+    <script src="app.js"></script>
 </body>
 
 </html>

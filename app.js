@@ -220,10 +220,18 @@ function switchTab(tab) {
     if (tab === 'reports') {
         setTimeout(() => renderAll(), 50); // delay to let display:block apply fully
     }
+
+    if (window.innerWidth <= 768) {
+        document.getElementById("sidebar").classList.remove("mobile-open");
+    }
 }
 
 function toggleSidebar() {
-    document.getElementById("sidebar").classList.toggle("collapsed");
+    if (window.innerWidth <= 768) {
+        document.getElementById("sidebar").classList.toggle("mobile-open");
+    } else {
+        document.getElementById("sidebar").classList.toggle("collapsed");
+    }
 }
 
 window.handleGlobalClick = function (e) {

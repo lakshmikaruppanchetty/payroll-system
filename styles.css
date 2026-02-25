@@ -445,34 +445,43 @@
 
             .sidebar {
                 width: 100%;
-                padding: 10px;
+                padding: 15px 10px;
                 box-sizing: border-box;
-                position: static;
+                position: relative;
                 text-align: center;
-                flex-direction: row;
-                flex-wrap: wrap;
-                justify-content: center;
+                flex-direction: column;
+                justify-content: flex-start;
                 gap: 5px;
             }
 
             .sidebar.collapsed {
                 width: 100%;
-                padding: 10px;
+                padding: 15px 10px;
             }
 
             .sidebar-menu {
-                display: flex;
-                flex-wrap: wrap;
+                display: none;
+                flex-direction: column;
                 justify-content: center;
                 gap: 10px;
+                margin-top: 15px;
+            }
+
+            .sidebar.mobile-open .sidebar-menu {
+                display: flex;
             }
 
             .sidebar-menu li {
-                margin-bottom: 0;
+                margin-bottom: 0px;
+                justify-content: center;
             }
 
             .sidebar-toggle {
-                display: none;
+                display: flex;
+                position: absolute;
+                top: 15px;
+                right: 15px;
+                z-index: 1001;
             }
 
             #logoContainer {

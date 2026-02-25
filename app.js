@@ -573,37 +573,68 @@ function renderCharts(filteredEmps, displayData) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            scales: { y: { beginAtZero: true } }
+            scales: { y: { beginAtZero: true } },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'right'
+                }
+            }
         }
     });
 
     // Prepare Branch Data
     const filteredBranches = [...new Set(displayData.map(e => e.branch))];
+
+    // Distinct vibrant color palette for Branches
+    const colorPalette = [
+        'rgba(255, 99, 132, 0.7)',
+        'rgba(54, 162, 235, 0.7)',
+        'rgba(255, 206, 86, 0.7)',
+        'rgba(75, 192, 192, 0.7)',
+        'rgba(153, 102, 255, 0.7)',
+        'rgba(255, 159, 64, 0.7)',
+        'rgba(199, 199, 199, 0.7)',
+        'rgba(83, 211, 151, 0.7)',
+        'rgba(224, 74, 150, 0.7)',
+        'rgba(102, 126, 255, 0.7)'
+    ];
+
     const branchLabels = [];
-    const branchData = filteredBranches.map(b => {
+    const branchColors = [];
+    const branchBorderColors = [];
+    const branchData = filteredBranches.map((b, index) => {
         let ent = displayData.filter(x => x.branch === b);
         let p = ent.reduce((s, c) => s + parseFloat(c.pay), 0);
         branchLabels.push(`${b} ($${p.toFixed(2)})`);
+        branchColors.push(colorPalette[index % colorPalette.length]);
+        branchBorderColors.push(colorPalette[index % colorPalette.length].replace('0.7', '1'));
         return p;
     });
 
     if (branchChartInstance) branchChartInstance.destroy();
+
     branchChartInstance = new Chart(ctxBranch, {
-        type: 'bar',
+        type: 'pie',
         data: {
             labels: branchLabels,
             datasets: [{
                 label: 'Total Gross Pay ($)',
                 data: branchData,
-                backgroundColor: 'rgba(75, 192, 192, 0.6)',
-                borderColor: 'rgba(75, 192, 192, 1)',
+                backgroundColor: branchColors,
+                borderColor: branchBorderColors,
                 borderWidth: 1
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            scales: { y: { beginAtZero: true } }
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'right'
+                }
+            }
         }
     });
 }

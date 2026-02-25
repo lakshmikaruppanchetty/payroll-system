@@ -94,10 +94,11 @@ function applySettings() {
 
     if (!appSettings.showPdf && !appSettings.showCsv) {
         topRow.appendChild(setupCard);
+        topRow.appendChild(bulkCard);
         botRow.appendChild(entryCard);
-        botRow.appendChild(bulkCard);
     } else {
         topRow.appendChild(setupCard);
+        topRow.appendChild(bulkCard);
         topRow.appendChild(csvCard);
         botRow.appendChild(pdfCard);
         botRow.appendChild(entryCard);

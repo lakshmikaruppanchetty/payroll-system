@@ -15,6 +15,8 @@ appSettings.geminiApiKey = appSettings.geminiApiKey ?? '';
 appSettings.securityPin = appSettings.securityPin ?? '1234';
 appSettings.lastBackupDate = appSettings.lastBackupDate ?? null;
 let editingId = null; let selectedId = null;
+let employeeChartInstance = null;
+let branchChartInstance = null;
 
 window.renderRates = function () {
     const rateSelect = document.getElementById("hourlyRate");
@@ -82,7 +84,6 @@ function applySettings() {
     const topRow = document.getElementById("topFlexRow");
     const botRow = document.getElementById("botFlexRow");
     const setupCard = document.getElementById("setupCard");
-    const bulkCard = document.getElementById("bulkCard");
     const csvCard = document.getElementById("csvCard");
     const pdfCard = document.getElementById("pdfCard");
     const entryCard = document.getElementById("entryCard");
@@ -93,14 +94,15 @@ function applySettings() {
     if (!appSettings.showPdf && !appSettings.showCsv) {
         topRow.appendChild(setupCard);
         botRow.appendChild(entryCard);
-        botRow.appendChild(bulkCard);
     } else {
         topRow.appendChild(setupCard);
-        topRow.appendChild(bulkCard);
         topRow.appendChild(csvCard);
         botRow.appendChild(pdfCard);
         botRow.appendChild(entryCard);
     }
+
+    const bGC = document.getElementById("branchGraphCard");
+    if (bGC) bGC.style.display = appSettings.showBranch ? "" : "none";
 
     document.getElementById("toggleBranch").checked = appSettings.showBranch;
     document.getElementById("toggleSummary").checked = appSettings.showSummary;
@@ -170,6 +172,15 @@ function switchTab(tab) {
     document.querySelectorAll('.sidebar-menu li').forEach(el => el.classList.remove('active'));
     document.getElementById(tab + 'View').classList.add('active');
     document.getElementById('menu' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+
+    const shared = document.getElementById("sharedFilters");
+    if (shared) {
+        if (tab === 'payroll') {
+            document.getElementById("payrollFiltersContainer").appendChild(shared);
+        } else if (tab === 'reports') {
+            document.getElementById("reportsFiltersContainer").appendChild(shared);
+        }
+    }
 }
 
 function toggleSidebar() {
@@ -480,7 +491,72 @@ window.renderAll = function () {
             clearBtn.onclick = function () { clearBranchSecure(finalBranchFilter); };
         }
     }
+
+    renderCharts(filteredEmps, display);
 };
+
+function renderCharts(filteredEmps, displayData) {
+    const ctxEmp = document.getElementById("employeeGraph");
+    const ctxBranch = document.getElementById("branchGraph");
+    if (!ctxEmp || !ctxBranch || typeof Chart === 'undefined') return;
+
+    // Prepare Employee Data
+    const empLabels = filteredEmps;
+    const empData = empLabels.map(n => {
+        let ent = displayData.filter(x => x.name === n);
+        return ent.reduce((s, c) => s + c.total, 0);
+    });
+
+    if (employeeChartInstance) employeeChartInstance.destroy();
+    employeeChartInstance = new Chart(ctxEmp, {
+        type: 'line',
+        data: {
+            labels: empLabels,
+            datasets: [{
+                label: 'Total Hours Worked',
+                data: empData,
+                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: { y: { beginAtZero: true } }
+        }
+    });
+
+    // Prepare Branch Data
+    const filteredBranches = [...new Set(displayData.map(e => e.branch))];
+    const branchData = filteredBranches.map(b => {
+        let ent = displayData.filter(x => x.branch === b);
+        let p = ent.reduce((s, c) => s + parseFloat(c.pay), 0);
+        return p;
+    });
+
+    if (branchChartInstance) branchChartInstance.destroy();
+    branchChartInstance = new Chart(ctxBranch, {
+        type: 'bar',
+        data: {
+            labels: filteredBranches,
+            datasets: [{
+                label: 'Total Gross Pay ($)',
+                data: branchData,
+                backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: { y: { beginAtZero: true } }
+        }
+    });
+}
 
 window.checkExistingShifts = function () {
     const name = document.getElementById("empName").value, date = document.getElementById("workDate").value; if (!name || !date) return;

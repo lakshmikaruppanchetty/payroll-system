@@ -12,8 +12,8 @@
     <title>Payroll Management System | Free AI Timesheet & Payroll Tool</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="styles.css">
 </head>
 
@@ -33,6 +33,7 @@
         <ul class="sidebar-menu">
             <li id="menuPayroll" class="active" onclick="switchTab('payroll')"><i>📁</i> <span>Payroll Management</span>
             </li>
+            <li id="menuReports" onclick="switchTab('reports')"><i>📊</i> <span>Reports & Analytics</span></li>
             <li id="menuSettings" onclick="switchTab('settings')"><i>⚙️</i> <span>Settings</span></li>
             <li id="menuAbout" onclick="switchTab('about')"><i>ℹ️</i> <span>About</span></li>
         </ul>
@@ -59,18 +60,7 @@
                     <input type="text" id="branchName" placeholder="Type Branch Name" style="margin-top:8px;">
                 </div>
 
-                <div class="card bulk-card" id="bulkCard">
-                    <label>⚡ Global Profile Updates<span class="tooltip-icon">i<span class="tooltip-text">Mass-update
-                                the branch or hourly rate for all previous historical shifts
-                                simultaneously.</span></span></label>
-                    <p style="font-size: 11px; margin-bottom: 8px; color: #856404;">Apply new Branch/Rate to all
-                        historical records.</p>
-                    <select id="bulkEmpTarget" style="margin-bottom:8px;">
-                    </select>
-                    <label>Update Hourly Rate to:</label><select id="bulkRateSelect"></select>
-                    <button class="btn-warning" onclick="executeBulkUpdate()" style="width: 100%;">⚡ Execute
-                        Changes</button>
-                </div>
+                <!-- Removed bulkCard from here -->
 
                 <div class="card" id="csvCard">
                     <label>2. Import CSV File<span class="tooltip-icon">i<span class="tooltip-text">Import your
@@ -131,48 +121,54 @@
                 </div>
             </div>
 
-            <div class="section-header" style="margin-top: 20px;">Global Data Filters & Exports<span
-                    class="tooltip-icon" style="margin-left: 10px;">i<span class="tooltip-text">These powerful filters
-                        apply globally to the Activity Log, Employee Summary, and Branch Performance tables
-                        below.</span></span></div>
-            <div class="filter-container" style="flex-wrap: wrap; align-items: center;">
-                <label>Filter Employee:</label><select id="viewFilter" onchange="renderAll()" style="width: 180px;">
-                    <option value="ALL">All Employees</option>
-                </select>
-                <label id="branchFilterLabel" style="margin-left:15px;">Filter Branch:</label><select id="branchFilter"
-                    onchange="renderAll()" style="width: 180px;">
-                    <option value="ALL">All Branches</option>
-                </select>
-                <button class="btn-primary" id="btnExportCsv"
-                    style="background: #6c757d; margin: 0 0 0 15px; padding: 6px 12px; font-size: 13px;"
-                    onclick="exportToExcel()">Export CSV</button>
-                <span id="backupReminder"
-                    style="color: #dc3545; font-size: 11px; margin-left: 8px; font-weight: bold; display: none;">⚠️
-                    Backup Overdue</span>
-                <button class="btn-primary" id="btnExportPdf"
-                    style="background: #17a2b8; margin: 0 0 0 10px; padding: 6px 12px; font-size: 13px;"
-                    onclick="exportToPDF()">Generate PDF</button>
-                <button class="btn-primary" id="btnClearDatabase"
-                    style="background: #dc3545; margin: 0 0 0 10px; padding: 6px 12px; font-size: 13px;"
-                    onclick="clearAllTablesSecure()">Clear Database</button>
-                <div style="flex-basis: 100%; height: 0; margin: 0;"></div>
-                <label>Date Filter:</label>
-                <select id="dateFilterPreset" onchange="applyDatePreset()"
-                    style="width: 150px; padding: 6px; margin-right: 15px;">
-                    <option value="today">Today</option>
-                    <option value="current_month">Current Month</option>
-                    <option value="last_month">Last Month</option>
-                    <option value="custom">Custom Date</option>
-                </select>
-                <div id="customDateInputs" style="display: none; align-items: center;">
-                    <label>Start Date:</label>
-                    <input type="date" id="filterStartDate" onchange="renderAll()"
-                        style="width: 140px; padding: 6px; margin-left: 5px;">
-                    <label style="margin-left: 10px;">End Date:</label>
-                    <input type="date" id="filterEndDate" onchange="renderAll()"
-                        style="width: 140px; padding: 6px; margin-left: 5px;">
-                    <button class="btn-reset" onclick="clearDateFilter()" style="margin-left: 10px;">Clear
-                        Dates</button>
+            <div id="payrollFiltersContainer">
+                <div id="sharedFilters">
+                    <div class="section-header" style="margin-top: 20px;">Global Data Filters & Exports<span
+                            class="tooltip-icon" style="margin-left: 10px;">i<span class="tooltip-text">These powerful
+                                filters
+                                apply globally to the Activity Log, Employee Summary, and Branch Performance tables
+                                below.</span></span></div>
+                    <div class="filter-container" style="flex-wrap: wrap; align-items: center;">
+                        <label>Filter Employee:</label><select id="viewFilter" onchange="renderAll()"
+                            style="width: 180px;">
+                            <option value="ALL">All Employees</option>
+                        </select>
+                        <label id="branchFilterLabel" style="margin-left:15px;">Filter Branch:</label><select
+                            id="branchFilter" onchange="renderAll()" style="width: 180px;">
+                            <option value="ALL">All Branches</option>
+                        </select>
+                        <button class="btn-primary" id="btnExportCsv"
+                            style="background: #6c757d; margin: 0 0 0 15px; padding: 6px 12px; font-size: 13px;"
+                            onclick="exportToExcel()">Export CSV</button>
+                        <span id="backupReminder"
+                            style="color: #dc3545; font-size: 11px; margin-left: 8px; font-weight: bold; display: none;">⚠️
+                            Backup Overdue</span>
+                        <button class="btn-primary" id="btnExportPdf"
+                            style="background: #17a2b8; margin: 0 0 0 10px; padding: 6px 12px; font-size: 13px;"
+                            onclick="exportToPDF()">Generate PDF</button>
+                        <button class="btn-primary" id="btnClearDatabase"
+                            style="background: #dc3545; margin: 0 0 0 10px; padding: 6px 12px; font-size: 13px;"
+                            onclick="clearAllTablesSecure()">Clear Database</button>
+                        <div style="flex-basis: 100%; height: 0; margin: 0;"></div>
+                        <label>Date Filter:</label>
+                        <select id="dateFilterPreset" onchange="applyDatePreset()"
+                            style="width: 150px; padding: 6px; margin-right: 15px;">
+                            <option value="today">Today</option>
+                            <option value="current_month">Current Month</option>
+                            <option value="last_month">Last Month</option>
+                            <option value="custom">Custom Date</option>
+                        </select>
+                        <div id="customDateInputs" style="display: none; align-items: center;">
+                            <label>Start Date:</label>
+                            <input type="date" id="filterStartDate" onchange="renderAll()"
+                                style="width: 140px; padding: 6px; margin-left: 5px;">
+                            <label style="margin-left: 10px;">End Date:</label>
+                            <input type="date" id="filterEndDate" onchange="renderAll()"
+                                style="width: 140px; padding: 6px; margin-left: 5px;">
+                            <button class="btn-reset" onclick="clearDateFilter()" style="margin-left: 10px;">Clear
+                                Dates</button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -196,9 +192,47 @@
                 <tbody id="dailyTableBody"></tbody>
             </table>
 
+        </div>
+
+        <div id="reportsView" class="view-section">
+            <h2 style="text-align: center;">Reports & Analytics</h2>
+
+            <div id="reportsFiltersContainer"></div>
+
+            <div class="flex-container" style="margin-top: 20px;">
+                <div class="card bulk-card" id="bulkCard">
+                    <label>⚡ Global Profile Updates<span class="tooltip-icon">i<span class="tooltip-text">Mass-update
+                                the branch or hourly rate for all previous historical shifts
+                                simultaneously.</span></span></label>
+                    <p style="font-size: 11px; margin-bottom: 8px; color: #856404;">Apply new Branch/Rate to all
+                        historical records.</p>
+                    <select id="bulkEmpTarget" style="margin-bottom:8px;">
+                    </select>
+                    <label>Update Hourly Rate to:</label><select id="bulkRateSelect"></select>
+                    <button class="btn-warning" onclick="executeBulkUpdate()" style="width: 100%;">⚡ Execute
+                        Changes</button>
+                </div>
+            </div>
+
+            <div class="flex-container" style="margin-top: 20px;">
+                <div class="card" style="flex: 1;">
+                    <h3 style="text-align: center; margin-top: 0; margin-bottom: 15px;">Employee vs Hours Worked</h3>
+                    <div style="position: relative; height: 300px; width: 100%;">
+                        <canvas id="employeeGraph"></canvas>
+                    </div>
+                </div>
+                <div class="card" style="flex: 1;" id="branchGraphCard">
+                    <h3 style="text-align: center; margin-top: 0; margin-bottom: 15px;">Branch Performance (Total Pay)
+                    </h3>
+                    <div style="position: relative; height: 300px; width: 100%;">
+                        <canvas id="branchGraph"></canvas>
+                    </div>
+                </div>
+            </div>
+
             <div id="summaryTableSection">
-                <div class="section-header">Employee Summary & Bulk Actions<span class="tooltip-icon"
-                        style="margin-left: 10px;">i<span class="tooltip-text">A master pivot table displaying gross
+                <div class="section-header">Employee Summary<span class="tooltip-icon" style="margin-left: 10px;">i<span
+                            class="tooltip-text">A master pivot table displaying gross
                             total pay and aggregate hours per employee limit. Includes a secure wipe database
                             feature.</span></span></div>
                 <table id="summaryTable">

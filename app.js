@@ -46,6 +46,23 @@ window.onload = function () {
     renderRates();
     applySettings();
     toggleClockFormat();
+
+    if (masterData.length > 0) {
+        const d = new Date();
+        const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        const cm = todayStr.substring(0, 7);
+        const hasToday = masterData.some(e => e.date === todayStr);
+
+        if (!hasToday) {
+            const latestDate = masterData.reduce((max, e) => e.date > max ? e.date : max, "0000-00-00");
+            if (latestDate.startsWith(cm)) {
+                document.getElementById("dateFilterPreset").value = "current_month";
+            } else {
+                document.getElementById("dateFilterPreset").value = "custom";
+            }
+        }
+    }
+
     applyDatePreset();
     if (typeof renderBackupReminder === "function") renderBackupReminder();
 };
@@ -478,7 +495,7 @@ window.renderAll = function () {
             let ent = display.filter(x => x.branch === b);
             if (ent.length > 0) {
                 let h = ent.reduce((s, c) => s + c.total, 0), p = ent.reduce((s, c) => s + parseFloat(c.pay), 0);
-                branchSummaryBody.innerHTML += `<tr><td>${b}</td><td>${decToT(h)}</td><td>$${p.toFixed(2)}</td></tr>`;
+                branchSummaryBody.innerHTML += `<tr><td>${b}</td><td>${decToT(h)}</td><td>$${p.toFixed(2)}</td><td><button class="btn-danger-x" onclick="clearBranchSecure('${b}')">Clear All</button></td></tr>`;
             }
         });
     }
@@ -503,10 +520,11 @@ function renderCharts(filteredEmps, displayData) {
     const ctxBranch = document.getElementById("branchGraph");
     if (!ctxEmp || !ctxBranch || typeof Chart === 'undefined') return;
 
-    // Prepare Employee Data
-    const empLabels = filteredEmps;
-    const empData = empLabels.map(n => {
-        let ent = displayData.filter(x => x.name === n);
+    // Prepare Day Data
+    const uniqueDates = [...new Set(displayData.map(e => e.date))].sort();
+    const dayLabels = uniqueDates;
+    const dayData = uniqueDates.map(d => {
+        let ent = displayData.filter(x => x.date === d);
         return ent.reduce((s, c) => s + c.total, 0);
     });
 
@@ -514,10 +532,10 @@ function renderCharts(filteredEmps, displayData) {
     employeeChartInstance = new Chart(ctxEmp, {
         type: 'line',
         data: {
-            labels: empLabels,
+            labels: dayLabels,
             datasets: [{
                 label: 'Total Hours Worked',
-                data: empData,
+                data: dayData,
                 backgroundColor: 'rgba(54, 162, 235, 0.2)',
                 borderColor: 'rgba(54, 162, 235, 1)',
                 borderWidth: 2,
@@ -534,9 +552,11 @@ function renderCharts(filteredEmps, displayData) {
 
     // Prepare Branch Data
     const filteredBranches = [...new Set(displayData.map(e => e.branch))];
+    const branchLabels = [];
     const branchData = filteredBranches.map(b => {
         let ent = displayData.filter(x => x.branch === b);
         let p = ent.reduce((s, c) => s + parseFloat(c.pay), 0);
+        branchLabels.push(`${b} ($${p.toFixed(2)})`);
         return p;
     });
 
@@ -544,7 +564,7 @@ function renderCharts(filteredEmps, displayData) {
     branchChartInstance = new Chart(ctxBranch, {
         type: 'bar',
         data: {
-            labels: filteredBranches,
+            labels: branchLabels,
             datasets: [{
                 label: 'Total Gross Pay ($)',
                 data: branchData,
@@ -624,8 +644,18 @@ window.updateNameFromDropdown = function () {
     }
 };
 window.updateBranchFromDropdown = function () { const s = document.getElementById("branchSelectDropdown"); if (s.value !== "") { document.getElementById("branchName").value = s.value; renderAll(); } };
-window.deleteEntry = function (id) { if (confirm("Delete day?")) { masterData = masterData.filter(e => e.id !== id); localStorage.setItem("payroll_v20", JSON.stringify(masterData)); renderAll(); } };
-window.deleteEmployeeBulk = function (n) { if (confirm("Clear history for " + n + "?")) { masterData = masterData.filter(e => e.name !== n); localStorage.setItem("payroll_v20", JSON.stringify(masterData)); renderAll(); } };
+window.deleteEntry = function (id) {
+    const p = prompt("Security PIN required to delete this entry:");
+    if (p === appSettings.securityPin) {
+        if (confirm("Delete day?")) { masterData = masterData.filter(e => e.id !== id); localStorage.setItem("payroll_v20", JSON.stringify(masterData)); renderAll(); }
+    } else if (p) { alert("Incorrect PIN."); }
+};
+window.deleteEmployeeBulk = function (n) {
+    const p = prompt("Security PIN required to clear this employee history:");
+    if (p === appSettings.securityPin) {
+        if (confirm("Clear history for " + n + "?")) { masterData = masterData.filter(e => e.name !== n); localStorage.setItem("payroll_v20", JSON.stringify(masterData)); renderAll(); }
+    } else if (p) { alert("Incorrect PIN."); }
+};
 window.clearBranchSecure = function (branch) {
     const p = prompt("Security PIN:");
     if (p === appSettings.securityPin) {

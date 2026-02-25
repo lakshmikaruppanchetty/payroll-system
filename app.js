@@ -646,24 +646,17 @@ window.toggleExpandChart = function (cardId) {
     const overlay = document.getElementById('chartOverlay');
 
     if (card.classList.contains('chart-expanded')) {
-        closeExpandedChart();
+        card.classList.remove('chart-expanded');
+        overlay.style.display = 'none';
+        renderAll();
     } else {
-        closeExpandedChart(); // Ensure others are closed
+        document.querySelectorAll('.chart-expanded').forEach(el => el.classList.remove('chart-expanded'));
         card.classList.add('chart-expanded');
         overlay.style.display = 'block';
-    }
 
-    // Allow ChartJS to natively auto-resize 
-    setTimeout(() => {
-        if (employeeChartInstance) {
-            employeeChartInstance.resize();
-            employeeChartInstance.update();
-        }
-        if (branchChartInstance) {
-            branchChartInstance.resize();
-            branchChartInstance.update();
-        }
-    }, 300);
+        // Let CSS apply, then complete redraw so Chart.js natively registers modal size
+        setTimeout(() => renderAll(), 50);
+    }
 };
 
 window.closeExpandedChart = function () {
@@ -671,16 +664,7 @@ window.closeExpandedChart = function () {
     const overlay = document.getElementById('chartOverlay');
     if (overlay) overlay.style.display = 'none';
 
-    setTimeout(() => {
-        if (employeeChartInstance) {
-            employeeChartInstance.resize();
-            employeeChartInstance.update();
-        }
-        if (branchChartInstance) {
-            branchChartInstance.resize();
-            branchChartInstance.update();
-        }
-    }, 300);
+    setTimeout(() => renderAll(), 50);
 };
 
 window.checkExistingShifts = function () {

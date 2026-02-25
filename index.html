@@ -216,7 +216,7 @@
                 <div class="card clickable-chart" style="flex: 1; cursor: pointer; transition: transform 0.2s;"
                     id="employeeGraphCard" onclick="toggleExpandChart('employeeGraphCard')" title="Click to Expand">
                     <h3 style="text-align: center; margin-top: 0; margin-bottom: 15px;">Day vs Hours Worked 🔍</h3>
-                    <div class="chart-container" style="position: relative; height: 300px; width: 100%;">
+                    <div class="chart-container">
                         <canvas id="employeeGraph"></canvas>
                     </div>
                 </div>
@@ -224,7 +224,7 @@
                     id="branchGraphCard" onclick="toggleExpandChart('branchGraphCard')" title="Click to Expand">
                     <h3 style="text-align: center; margin-top: 0; margin-bottom: 15px;">Branch Performance (Total Pay)
                         🔍</h3>
-                    <div class="chart-container" style="position: relative; height: 300px; width: 100%;">
+                    <div class="chart-container">
                         <canvas id="branchGraph"></canvas>
                     </div>
                 </div>
@@ -427,6 +427,8 @@
     </div>
 
     <!-- jsPDF and AutoTable for PDF Generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
     <script src="app.js"></script>
 </body>
 

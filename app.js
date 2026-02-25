@@ -770,10 +770,13 @@ window.clearAllTablesSecure = function () {
 
 window.exportToExcel = function () {
     let csv = "Date,Employee,Branch,Shift 1,Shift 2,Shift 3,Total Hours,Hourly Rate,Total Pay\n";
+    const curFilter = document.getElementById("viewFilter").value;
+    const curBranchFilter = document.getElementById("branchFilter").value;
+
     let curData = masterData.filter(d => {
         let ok = true;
-        if (window.curFilter && window.curFilter !== "ALL") ok = d.name === window.curFilter;
-        if (ok && window.curBranchFilter && window.curBranchFilter !== "ALL") ok = d.branch === window.curBranchFilter;
+        if (curFilter && curFilter !== "ALL") ok = d.name === curFilter;
+        if (ok && curBranchFilter && curBranchFilter !== "ALL") ok = d.branch === curBranchFilter;
         const sD = document.getElementById("filterStartDate").value;
         const eD = document.getElementById("filterEndDate").value;
         if (ok && sD) ok = d.date >= sD;
@@ -832,8 +835,11 @@ window.exportToPDF = function () {
     // Add Active Filters to Header
     currentY += 6;
     let filterText = "Filters Active: ";
-    if (window.curFilter && window.curFilter !== "ALL") filterText += `Employee [${window.curFilter}]  `;
-    if (window.curBranchFilter && window.curBranchFilter !== "ALL") filterText += `Branch [${window.curBranchFilter}]  `;
+    const curFilter = document.getElementById("viewFilter").value;
+    const curBranchFilter = document.getElementById("branchFilter").value;
+
+    if (curFilter && curFilter !== "ALL") filterText += `Employee [${curFilter}]  `;
+    if (curBranchFilter && curBranchFilter !== "ALL") filterText += `Branch [${curBranchFilter}]  `;
     const sD = document.getElementById("filterStartDate").value;
     const eD = document.getElementById("filterEndDate").value;
     if (sD || eD) filterText += `Date [${sD || 'Any'} to ${eD || 'Any'}]`;
@@ -845,8 +851,8 @@ window.exportToPDF = function () {
     // Gather filtered data identical to CSV export
     let curData = masterData.filter(d => {
         let ok = true;
-        if (window.curFilter && window.curFilter !== "ALL") ok = d.name === window.curFilter;
-        if (ok && window.curBranchFilter && window.curBranchFilter !== "ALL") ok = d.branch === window.curBranchFilter;
+        if (curFilter && curFilter !== "ALL") ok = d.name === curFilter;
+        if (ok && curBranchFilter && curBranchFilter !== "ALL") ok = d.branch === curBranchFilter;
         if (ok && sD) ok = d.date >= sD;
         if (ok && eD) ok = d.date <= eD;
         return ok;

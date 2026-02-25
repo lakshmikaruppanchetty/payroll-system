@@ -561,6 +561,12 @@
             margin-top: 10px !important;
         }
 
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+
         .chart-expanded .chart-container {
             flex: 1;
             height: 80vh !important;

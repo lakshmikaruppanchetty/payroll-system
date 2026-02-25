@@ -39,6 +39,8 @@
         </ul>
     </div>
 
+    <div id="chartOverlay" class="chart-overlay" onclick="closeExpandedChart()"></div>
+
     <div class="main-content" onclick="handleGlobalClick(event)">
         <div id="payrollView" class="view-section active">
             <h2 style="text-align: center;">Payroll Management Tool v20.3</h2>
@@ -210,17 +212,19 @@
             <div id="reportsFiltersContainer"></div>
 
 
-            <div style="margin-top: 20px;">
-                <div class="card" style="width: 100%; margin-bottom: 20px;">
-                    <h3 style="text-align: center; margin-top: 0; margin-bottom: 15px;">Day vs Hours Worked</h3>
-                    <div style="position: relative; height: 400px; width: 100%;">
+            <div class="flex-container" style="margin-top: 20px;">
+                <div class="card clickable-chart" style="flex: 1; cursor: pointer; transition: transform 0.2s;"
+                    id="employeeGraphCard" onclick="toggleExpandChart('employeeGraphCard')" title="Click to Expand">
+                    <h3 style="text-align: center; margin-top: 0; margin-bottom: 15px;">Day vs Hours Worked 🔍</h3>
+                    <div style="position: relative; height: 300px; width: 100%;">
                         <canvas id="employeeGraph"></canvas>
                     </div>
                 </div>
-                <div class="card" style="width: 100%;" id="branchGraphCard">
+                <div class="card clickable-chart" style="flex: 1; cursor: pointer; transition: transform 0.2s;"
+                    id="branchGraphCard" onclick="toggleExpandChart('branchGraphCard')" title="Click to Expand">
                     <h3 style="text-align: center; margin-top: 0; margin-bottom: 15px;">Branch Performance (Total Pay)
-                    </h3>
-                    <div style="position: relative; height: 400px; width: 100%;">
+                        🔍</h3>
+                    <div style="position: relative; height: 300px; width: 100%;">
                         <canvas id="branchGraph"></canvas>
                     </div>
                 </div>

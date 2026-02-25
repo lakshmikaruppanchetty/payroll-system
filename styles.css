@@ -500,21 +500,23 @@
                 align-items: flex-start;
             }
 
-            .filter-container select, .filter-container input {
+            .filter-container select,
+            .filter-container input {
                 width: 100% !important;
                 margin-bottom: 10px;
                 margin-left: 0 !important;
             }
 
-            .filter-container button, .filter-container span {
+            .filter-container button,
+            .filter-container span {
                 margin: 5px 0 5px 0 !important;
                 width: 100%;
             }
 
             /* Responsive Tables with horizontal scrolling */
-            #payrollView > table, 
-            #dailyTable, 
-            #summaryTable, 
+            #payrollView>table,
+            #dailyTable,
+            #summaryTable,
             #branchSummaryTable {
                 display: block;
                 width: 100%;
@@ -522,8 +524,50 @@
                 white-space: nowrap;
                 -webkit-overflow-scrolling: touch;
             }
-            
+
             #pdfViewer {
                 height: 350px;
             }
+        }
+
+        /* Chart Fullscreen Styles */
+        .chart-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 9998;
+            display: none;
+        }
+
+        .chart-expanded {
+            position: fixed !important;
+            top: 5%;
+            left: 5%;
+            width: 90% !important;
+            height: 90% !important;
+            z-index: 9999;
+            margin: 0 !important;
+            box-sizing: border-box;
+            background: white;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chart-expanded>h3 {
+            margin-top: 10px !important;
+        }
+
+        .chart-expanded>div {
+            flex: 1;
+            height: auto !important;
+            width: 100% !important;
+        }
+
+        .clickable-chart:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
         }

@@ -641,6 +641,36 @@ function renderCharts(filteredEmps, displayData) {
     });
 }
 
+window.toggleExpandChart = function (cardId) {
+    const card = document.getElementById(cardId);
+    const overlay = document.getElementById('chartOverlay');
+
+    if (card.classList.contains('chart-expanded')) {
+        closeExpandedChart();
+    } else {
+        closeExpandedChart(); // Ensure others are closed
+        card.classList.add('chart-expanded');
+        overlay.style.display = 'block';
+    }
+
+    // Allow ChartJS to natively auto-resize 
+    setTimeout(() => {
+        if (employeeChartInstance) employeeChartInstance.resize();
+        if (branchChartInstance) branchChartInstance.resize();
+    }, 50);
+};
+
+window.closeExpandedChart = function () {
+    document.querySelectorAll('.chart-expanded').forEach(el => el.classList.remove('chart-expanded'));
+    const overlay = document.getElementById('chartOverlay');
+    if (overlay) overlay.style.display = 'none';
+
+    setTimeout(() => {
+        if (employeeChartInstance) employeeChartInstance.resize();
+        if (branchChartInstance) branchChartInstance.resize();
+    }, 50);
+};
+
 window.checkExistingShifts = function () {
     const name = document.getElementById("empName").value, date = document.getElementById("workDate").value; if (!name || !date) return;
     const e = masterData.find(x => x.name === name && x.date === date);

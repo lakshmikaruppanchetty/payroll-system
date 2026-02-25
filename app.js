@@ -98,7 +98,6 @@ function applySettings() {
         botRow.appendChild(bulkCard);
     } else {
         topRow.appendChild(setupCard);
-        topRow.appendChild(bulkCard);
         topRow.appendChild(csvCard);
         botRow.appendChild(pdfCard);
         botRow.appendChild(entryCard);

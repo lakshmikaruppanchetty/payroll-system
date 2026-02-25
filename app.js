@@ -142,6 +142,10 @@ function clearTourHighlight() {
             el.style.left = '';
             el.style.transform = '';
         }
+        if (el.id === 'dailyTable') {
+            el.style.background = '';
+            el.style.position = '';
+        }
     });
 
     const dummyrow = document.getElementById("dummyTourRow");
@@ -161,24 +165,25 @@ function renderTourStep() {
             tr.id = "dummyTourRow";
             tr.className = "selected";
             tr.style.background = "#e8f4f8";
-            tr.style.position = "relative";
-            tr.style.zIndex = "10006"; // keep inside tour highlight boundaries
             tr.innerHTML = `<td>Sample Date</td><td>Sample Branch</td><td>09:00 - 17:00</td><td>--</td><td>--</td><td>8.00</td><td>$20.00</td><td>$160.00</td><td><button class="btn-warning" style="margin:0; padding: 2px 5px; font-size:10px; cursor: default;">✎ Diff</button></td>`;
             if (tbody.firstChild) tbody.insertBefore(tr, tbody.firstChild);
             else tbody.appendChild(tr);
 
-            el = tr;
+            el = document.getElementById("dailyTable");
+            el.style.background = "#fff";
+            el.style.position = "relative";
 
             const dupBtn = document.getElementById('floatingDupBtn');
             dupBtn.style.display = 'block';
+            dupBtn.style.zIndex = '10007'; // Ensure floating button stays above the table highlight
+            dupBtn.classList.add('tour-highlight');
 
             // Wait for smooth scrolling to mostly resolve before calculating absolute document pixel layout top for the button pop
             setTimeout(() => {
-                const rect = el.getBoundingClientRect();
+                const rect = tr.getBoundingClientRect();
                 dupBtn.style.left = (rect.left + rect.width / 2) + "px";
                 dupBtn.style.top = (rect.top + window.scrollY - 30) + "px";
                 dupBtn.style.transform = "translate(-50%, 0)";
-                dupBtn.classList.add('tour-highlight');
             }, 300);
         }
 

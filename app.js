@@ -203,6 +203,10 @@ function switchTab(tab) {
             document.getElementById("reportsFiltersContainer").appendChild(shared);
         }
     }
+
+    if (tab === 'reports') {
+        setTimeout(() => renderAll(), 50); // delay to let display:block apply fully
+    }
 }
 
 function toggleSidebar() {
@@ -418,6 +422,25 @@ window.importCSV = function () {
         } catch (e) { alert("Format Error: " + e.message); }
         fileInput.value = '';
     }; reader.readAsText(fileInput.files[0]);
+};
+
+window.updateFilter = function () {
+    const vEmp = document.getElementById("viewFilter").value;
+    const vBranch = document.getElementById("branchFilter").value;
+
+    if (vEmp === "ALL") {
+        document.getElementById("empName").value = "";
+    } else {
+        document.getElementById("empName").value = vEmp;
+    }
+
+    if (vBranch === "ALL") {
+        document.getElementById("branchName").value = "";
+    } else {
+        document.getElementById("branchName").value = vBranch;
+    }
+
+    renderAll();
 };
 
 window.renderAll = function () {

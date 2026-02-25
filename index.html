@@ -139,12 +139,12 @@
                                 apply globally to the Activity Log, Employee Summary, and Branch Performance tables
                                 below.</span></span></div>
                     <div class="filter-container" style="flex-wrap: wrap; align-items: center;">
-                        <label>Filter Employee:</label><select id="viewFilter" onchange="renderAll()"
+                        <label>Filter Employee:</label><select id="viewFilter" onchange="updateFilter()"
                             style="width: 180px;">
                             <option value="ALL">All Employees</option>
                         </select>
                         <label id="branchFilterLabel" style="margin-left:15px;">Filter Branch:</label><select
-                            id="branchFilter" onchange="renderAll()" style="width: 180px;">
+                            id="branchFilter" onchange="updateFilter()" style="width: 180px;">
                             <option value="ALL">All Branches</option>
                         </select>
                         <button class="btn-primary" id="btnExportCsv"

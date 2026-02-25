@@ -663,7 +663,7 @@ window.toggleExpandChart = function (cardId) {
             branchChartInstance.resize();
             branchChartInstance.update();
         }
-    }, 100);
+    }, 300);
 };
 
 window.closeExpandedChart = function () {
@@ -680,7 +680,7 @@ window.closeExpandedChart = function () {
             branchChartInstance.resize();
             branchChartInstance.update();
         }
-    }, 100);
+    }, 300);
 };
 
 window.checkExistingShifts = function () {

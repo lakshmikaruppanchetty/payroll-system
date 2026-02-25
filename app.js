@@ -75,7 +75,104 @@ window.onload = function () {
 
     applyDatePreset();
     if (typeof renderBackupReminder === "function") renderBackupReminder();
+
+    if (!localStorage.getItem("onboardingComplete_v20")) {
+        startUserTour();
+    }
 };
+
+let currentTourStep = 0;
+const tourSteps = [
+    {
+        tab: 'settings',
+        targetId: 'logoUploadSection',
+        title: "Branding",
+        text: "Start by making it yours! Upload your company logo here."
+    },
+    {
+        tab: 'payroll',
+        targetId: 'setupCard',
+        title: "Setup",
+        text: "Add your team and branch locations to get started."
+    },
+    {
+        tab: 'payroll',
+        targetId: 'floatingDupBtn',
+        title: "Efficiency",
+        text: "Save time by duplicating previous records with one click."
+    },
+    {
+        tab: 'payroll',
+        targetId: 'btnExportCsv',
+        title: "Safety",
+        text: "Always export your data at the end of the week to keep a safe backup."
+    }
+];
+
+window.startUserTour = function () {
+    document.getElementById('tourOverlay').style.display = 'block';
+    document.getElementById('tourBox').style.display = 'block';
+    currentTourStep = 0;
+    renderTourStep();
+};
+
+window.nextTourStep = function () {
+    clearTourHighlight();
+    currentTourStep++;
+    if (currentTourStep >= tourSteps.length) {
+        endTour();
+    } else {
+        renderTourStep();
+    }
+};
+
+window.endTour = function () {
+    clearTourHighlight();
+    document.getElementById('tourOverlay').style.display = 'none';
+    document.getElementById('tourBox').style.display = 'none';
+    localStorage.setItem("onboardingComplete_v20", "true");
+};
+
+function clearTourHighlight() {
+    document.querySelectorAll('.tour-highlight').forEach(el => {
+        el.classList.remove('tour-highlight');
+        if (el.id === 'floatingDupBtn') {
+            el.style.display = 'none';
+            el.style.top = '';
+            el.style.left = '';
+            el.style.transform = '';
+        }
+    });
+}
+
+function renderTourStep() {
+    const step = tourSteps[currentTourStep];
+    switchTab(step.tab);
+
+    setTimeout(() => {
+        let el = document.getElementById(step.targetId);
+        if (step.targetId === 'logoUploadSection') el = el.parentElement;
+
+        if (step.targetId === 'floatingDupBtn') {
+            el.style.display = 'block';
+            el.style.top = '150px';
+            el.style.left = '50%';
+            el.style.transform = 'translateX(-50%)';
+        }
+
+        el.classList.add('tour-highlight');
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+
+        document.getElementById('tourTitle').innerText = step.title;
+        document.getElementById('tourText').innerText = step.text;
+
+        if (currentTourStep === tourSteps.length - 1) {
+            document.getElementById('tourNextBtn').innerText = "Finish Tour";
+        } else {
+            document.getElementById('tourNextBtn').innerText = "Next Step";
+        }
+    }, 150);
+}
 
 function saveSettings() {
     appSettings.showBranch = document.getElementById("toggleBranch").checked;

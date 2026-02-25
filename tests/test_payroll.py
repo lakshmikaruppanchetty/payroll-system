@@ -21,6 +21,8 @@ class TestPayrollManagement(unittest.TestCase):
         current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         self.file_path = f"file://{current_dir}/index.html"
         self.driver.get(self.file_path)
+        self.driver.execute_script("window.localStorage.setItem('onboardingComplete_v20', 'true');")
+        self.driver.refresh()
 
     def test_app_loads_successfully(self):
         self.assertIn("Payroll Management", self.driver.title)

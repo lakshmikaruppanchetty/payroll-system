@@ -5,10 +5,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description"
-        content="A completely free, private, and local browser application to calculate employee payrolls, extract handwritten timesheets using AI OCR, and export CSV logs.">
+        content="Free, privacy-first Payroll Management Tool for small businesses. Track employee hours across multiple branches with AI OCR timesheet scanning.">
     <meta name="keywords"
-        content="free payroll calculator, AI timesheet reader, local attendance tracker, small business payroll, employee shift log, offline payroll tool">
-    <meta name="author" content="Lakshmi Karuppanchetty">
+        content="free payroll tool, timesheet calculator, small business payroll, branch management, OCR timesheet reader">
+    <meta name="author" content="Lakshmi">
     <title>Payroll Management System | Free AI Timesheet & Payroll Tool</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
@@ -428,6 +428,12 @@
                         (Gemini 1.5) LLM APIs. Vision LLMs are capable of magically extracting and auto-filling shifts
                         directly from cursive handwritten timesheet photographs in seconds without compromising your
                         architecture.</li>
+                    <li style="margin-bottom: 15px;"><strong>Interactive Data Duplication:</strong> <br>Need to copy
+                        yesterday's schedule? Select any previously logged shift row to instantly duplicate the entire
+                        entry, saving crucial time on repetitive input combinations.</li>
+                    <li style="margin-bottom: 15px;"><strong>Granular Visibility Toggles:</strong> <br>Toggle exactly
+                        what modules you wish to see at any given moment via the new expanded Settings Panel, enabling
+                        customized analytics views down to the individual module level.</li>
                     <li style="margin-bottom: 15px;"><strong>Secure Data Storage:</strong> <br>All information,
                         including configuration keys, exists entirely within your browser's persistent `localStorage`.
                         Zero system databases exist to be compromised.</li>
@@ -445,6 +451,19 @@
     <div style="position: fixed; bottom: 10px; left: 15px; text-align: left; font-size: 14px; font-weight: bold; color: #888; pointer-events: none; z-index: 9999;"
         id="globalFooter">
         v20.5
+    </div>
+
+    <!-- Guided Tour HTML -->
+    <div id="tourOverlay"
+        style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.7); z-index:10000; pointer-events:none;">
+    </div>
+    <div id="tourBox"
+        style="display:none; position:fixed; z-index:10001; background:white; padding:25px; border-radius:12px; max-width:300px; box-shadow:0 10px 40px rgba(0,0,0,0.5); text-align:center; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+        <h3 style="margin-top:0; color: #17a2b8;" id="tourTitle">Welcome!</h3>
+        <p style="font-size:14px; color:#555; line-height: 1.5; margin-bottom: 20px;" id="tourText">Let's walk through
+            the core features.</p>
+        <button class="btn-primary" id="tourNextBtn" onclick="nextTourStep()"
+            style="width: 100%; margin: 0; padding: 10px; font-weight: bold;">Next Step</button>
     </div>
 
     <!-- jsPDF and AutoTable for PDF Generation -->

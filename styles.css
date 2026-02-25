@@ -119,6 +119,14 @@
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
             flex: 1;
             min-width: 320px;
+            position: relative;
+        }
+
+        .tour-highlight {
+            z-index: 10005 !important;
+            box-shadow: 0 0 0 4px #17a2b8, 0 0 20px rgba(23, 162, 184, 0.6) !important;
+            border-radius: inherit;
+            position: relative;
         }
 
         #pdfViewer {

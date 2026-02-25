@@ -57,8 +57,16 @@ window.onload = function () {
             const latestDate = masterData.reduce((max, e) => e.date > max ? e.date : max, "0000-00-00");
             if (latestDate.startsWith(cm)) {
                 document.getElementById("dateFilterPreset").value = "current_month";
-            } else {
+            } else if (latestDate !== "0000-00-00") {
                 document.getElementById("dateFilterPreset").value = "custom";
+                document.getElementById("customDateInputs").style.display = "flex";
+                const lY = latestDate.substring(0, 4);
+                const lM = latestDate.substring(5, 7);
+                document.getElementById("filterStartDate").value = `${lY}-${lM}-01`;
+                const lastDay = new Date(lY, parseInt(lM, 10), 0).getDate();
+                document.getElementById("filterEndDate").value = `${lY}-${lM}-${String(lastDay).padStart(2, '0')}`;
+            } else {
+                document.getElementById("dateFilterPreset").value = "current_month";
             }
         } else {
             document.getElementById("dateFilterPreset").value = "today";
@@ -81,8 +89,8 @@ function saveSettings() {
     appSettings.llmApiKey = document.getElementById("llmApiKey").value;
     appSettings.geminiApiKey = document.getElementById("geminiApiKey").value;
     appSettings.securityPin = document.getElementById("securityPinSetting").value || '1234';
-    appSettings.minRate = document.getElementById("minRateSetting").value;
-    appSettings.maxRate = document.getElementById("maxRateSetting").value;
+    appSettings.minRate = parseInt(document.getElementById("minRateSetting").value, 10) || 15;
+    appSettings.maxRate = parseInt(document.getElementById("maxRateSetting").value, 10) || 35;
     localStorage.setItem("settings_v20", JSON.stringify(appSettings));
     applySettings();
     renderRates();
@@ -583,7 +591,7 @@ function renderCharts(filteredEmps, displayData) {
             plugins: {
                 legend: {
                     display: true,
-                    position: 'right'
+                    position: 'bottom'
                 }
             }
         }
@@ -639,7 +647,7 @@ function renderCharts(filteredEmps, displayData) {
             plugins: {
                 legend: {
                     display: true,
-                    position: 'right'
+                    position: 'bottom'
                 }
             }
         }

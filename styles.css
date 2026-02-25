@@ -569,11 +569,13 @@
 
         .chart-expanded .chart-container {
             flex: 1;
-            height: 80vh !important;
-            max-height: 80vh !important;
+            height: 60vh !important;
+            max-height: 500px !important;
+            max-width: 900px !important;
             width: 100% !important;
             position: relative !important;
             display: block !important;
+            margin: 0 auto !important;
         }
 
         .clickable-chart:hover {

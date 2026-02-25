@@ -60,6 +60,8 @@ window.onload = function () {
             } else {
                 document.getElementById("dateFilterPreset").value = "custom";
             }
+        } else {
+            document.getElementById("dateFilterPreset").value = "today";
         }
     }
 
@@ -442,9 +444,11 @@ window.renderAll = function () {
         document.getElementById("viewFilter").value = emps[0];
         if (!document.getElementById("empName").value) document.getElementById("empName").value = emps[0];
     } else {
-        eS.value = cE; document.getElementById("viewFilter").value = vEmp;
+        eS.value = (cE === "ALL" || !cE) ? "" : cE;
+        document.getElementById("viewFilter").value = vEmp;
     }
-    bS.value = cB; document.getElementById("branchFilter").value = vBranch;
+    bS.value = (cB === "ALL" || !cB) ? "" : cB;
+    document.getElementById("branchFilter").value = vBranch;
 
     let fStart = document.getElementById("filterStartDate").value;
     let fEnd = document.getElementById("filterEndDate").value;
@@ -483,7 +487,7 @@ window.renderAll = function () {
     filteredEmps.forEach(n => {
         let ent = display.filter(x => x.name === n); let h = ent.reduce((s, c) => s + c.total, 0), p = ent.reduce((s, c) => s + parseFloat(c.pay), 0);
         if (ent.length > 0) {
-            summaryBody.innerHTML += `<tr style="background:#e8f5e9; font-weight:bold;"><td>${n}</td><td>${ent[0].branch}</td><td>${decToT(h)}</td><td>$${p.toFixed(2)}</td><td><button class="btn-primary" style="padding: 4px 8px; font-size: 11px; background:#17a2b8;" onclick="generatePayStub('${n}')">📄 PDF</button></td><td><button class="btn-danger-x" onclick="deleteEmployeeBulk('${n}')">Clear All</button></td></tr>`;
+            summaryBody.innerHTML += `<tr style="background:#e8f5e9; font-weight:bold;"><td style="text-align:left; padding-left:15px;">${n}</td><td>${ent[0].branch}</td><td>${decToT(h)}</td><td>$${p.toFixed(2)}</td><td><button class="btn-primary" style="padding: 4px 8px; font-size: 11px; background:#17a2b8;" onclick="generatePayStub('${n}')">📄 PDF</button></td><td><button class="btn-danger-x" onclick="deleteEmployeeBulk('${n}')">Clear All</button></td></tr>`;
         }
     });
 

@@ -59,7 +59,8 @@ class TestPayrollManagement(unittest.TestCase):
         driver = self.driver
         features = [
             ("toggleBranch", "branchSelectDropdown"),
-            ("toggleSummary", "summaryTableSection"),
+            ("toggleSummary", "employeeSummarySection"),
+            ("toggleBranchSummary", "branchSummarySection"),
             ("togglePdf", "pdfCard"),
             ("toggleCsv", "csvCard"),
             ("toggleExportPdf", "btnExportPdf")

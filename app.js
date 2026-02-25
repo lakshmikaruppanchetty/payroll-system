@@ -72,6 +72,7 @@ window.onload = function () {
 function saveSettings() {
     appSettings.showBranch = document.getElementById("toggleBranch").checked;
     appSettings.showSummary = document.getElementById("toggleSummary").checked;
+    appSettings.showBranchSummary = document.getElementById("toggleBranchSummary").checked;
     appSettings.showPdf = document.getElementById("togglePdf").checked;
     appSettings.showCsv = document.getElementById("toggleCsv").checked;
     appSettings.showExportPdf = document.getElementById("toggleExportPdf").checked;
@@ -96,7 +97,10 @@ function applySettings() {
     document.getElementById("hdrBranch").style.display = branchDisplay;
     document.getElementById("setupHeaderLabel").innerText = appSettings.showBranch ? "1. Employee & Branch Setup" : "1. Employee Setup";
 
-    document.getElementById("summaryTableSection").style.display = appSettings.showSummary ? "" : "none";
+    if (appSettings.showBranchSummary === undefined) appSettings.showBranchSummary = true;
+
+    document.getElementById("employeeSummarySection").style.display = appSettings.showSummary ? "" : "none";
+    document.getElementById("branchSummarySection").style.display = appSettings.showBranchSummary ? "" : "none";
     document.getElementById("pdfCard").style.display = appSettings.showPdf ? "" : "none";
     document.getElementById("csvCard").style.display = appSettings.showCsv ? "" : "none";
 
@@ -128,6 +132,7 @@ function applySettings() {
 
     document.getElementById("toggleBranch").checked = appSettings.showBranch;
     document.getElementById("toggleSummary").checked = appSettings.showSummary;
+    document.getElementById("toggleBranchSummary").checked = appSettings.showBranchSummary;
     document.getElementById("togglePdf").checked = appSettings.showPdf;
     document.getElementById("toggleCsv").checked = appSettings.showCsv;
     document.getElementById("toggleExportPdf").checked = appSettings.showExportPdf;

@@ -230,7 +230,7 @@
                 </div>
             </div>
 
-            <div id="summaryTableSection">
+            <div id="employeeSummarySection">
                 <div class="section-header">Employee Summary<span class="tooltip-icon" style="margin-left: 10px;">i<span
                             class="tooltip-text">A master pivot table displaying gross
                             total pay and aggregate hours per employee limit. Includes a secure wipe database
@@ -248,7 +248,9 @@
                     </thead>
                     <tbody></tbody>
                 </table>
+            </div>
 
+            <div id="branchSummarySection">
                 <div class="section-header" style="margin-top: 30px;" id="branchSummaryHeader">Branch Performance<span
                         class="tooltip-icon" style="margin-left: 10px;">i<span class="tooltip-text">A summary of total
                             aggregate hours and gross pay organized by company branch.</span></span></div>
@@ -355,6 +357,15 @@
                     </label>
                     <label for="toggleSummary" style="margin: 0; font-size: 14px; cursor: pointer;">Enable Employee
                         Summary Table</label>
+                </div>
+                <div class="toggle-box" style="padding-top: 5px;">
+                    <label class="switch">
+                        <input type="checkbox" id="toggleBranchSummary" onchange="saveSettings()">
+                        <span class="slider"></span>
+                    </label>
+                    <label for="toggleBranchSummary" style="margin: 0; font-size: 14px; cursor: pointer;">Enable Branch
+                        Summary
+                        Table</label>
                 </div>
                 <div class="toggle-box" style="padding-top: 5px;">
                     <label class="switch">

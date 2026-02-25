@@ -106,6 +106,24 @@ const tourSteps = [
         targetId: 'btnExportCsv',
         title: "Safety",
         text: "Always export your data at the end of the week to keep a safe backup."
+    },
+    {
+        tab: 'settings',
+        targetId: 'featureTogglesCard',
+        title: "Customization",
+        text: "You can toggle visibility of any module here to clean up your dashboard."
+    },
+    {
+        tab: 'reports',
+        targetId: 'employeeGraphCard',
+        title: "Analytics",
+        text: "Click any chart to automatically expand it into presentation mode."
+    },
+    {
+        tab: 'about',
+        targetId: 'aboutAppCard',
+        title: "You're All Set!",
+        text: "You can replay this tour anytime from the About pane. Enjoy!"
     }
 ];
 
@@ -175,7 +193,7 @@ function renderTourStep() {
 
             const dupBtn = document.getElementById('floatingDupBtn');
             dupBtn.style.display = 'block';
-            dupBtn.style.zIndex = '10007'; // Ensure floating button stays above the table highlight
+            dupBtn.style.setProperty('z-index', '10008', 'important'); // Ensure floating button natively pierces !important class override
             dupBtn.classList.add('tour-highlight');
 
             // Wait for smooth scrolling to mostly resolve before calculating absolute document pixel layout top for the button pop

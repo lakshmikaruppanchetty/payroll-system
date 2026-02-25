@@ -97,7 +97,7 @@ const tourSteps = [
     },
     {
         tab: 'payroll',
-        targetId: 'floatingDupBtn',
+        targetId: 'dummyTourRow',
         title: "Efficiency",
         text: "Save time by duplicating previous records with one click."
     },
@@ -143,6 +143,9 @@ function clearTourHighlight() {
             el.style.transform = '';
         }
     });
+
+    const dummyrow = document.getElementById("dummyTourRow");
+    if (dummyrow) dummyrow.remove();
 }
 
 function renderTourStep() {
@@ -151,14 +154,35 @@ function renderTourStep() {
 
     setTimeout(() => {
         let el = document.getElementById(step.targetId);
-        if (step.targetId === 'logoUploadSection') el = el.parentElement;
 
-        if (step.targetId === 'floatingDupBtn') {
-            el.style.display = 'block';
-            el.style.top = '150px';
-            el.style.left = '50%';
-            el.style.transform = 'translateX(-50%)';
+        if (step.targetId === 'dummyTourRow') {
+            const tbody = document.getElementById("dailyTableBody");
+            const tr = document.createElement("tr");
+            tr.id = "dummyTourRow";
+            tr.className = "selected";
+            tr.style.background = "#e8f4f8";
+            tr.style.position = "relative";
+            tr.style.zIndex = "10006"; // keep inside tour highlight boundaries
+            tr.innerHTML = `<td>Sample Date</td><td>Sample Branch</td><td>09:00 - 17:00</td><td>--</td><td>--</td><td>8.00</td><td>$20.00</td><td>$160.00</td><td><button class="btn-warning" style="margin:0; padding: 2px 5px; font-size:10px; cursor: default;">✎ Diff</button></td>`;
+            if (tbody.firstChild) tbody.insertBefore(tr, tbody.firstChild);
+            else tbody.appendChild(tr);
+
+            el = tr;
+
+            const dupBtn = document.getElementById('floatingDupBtn');
+            dupBtn.style.display = 'block';
+
+            // Wait for smooth scrolling to mostly resolve before calculating absolute document pixel layout top for the button pop
+            setTimeout(() => {
+                const rect = el.getBoundingClientRect();
+                dupBtn.style.left = (rect.left + rect.width / 2) + "px";
+                dupBtn.style.top = (rect.top + window.scrollY - 30) + "px";
+                dupBtn.style.transform = "translate(-50%, 0)";
+                dupBtn.classList.add('tour-highlight');
+            }, 300);
         }
+
+        if (step.targetId === 'logoUploadSection') el = el.parentElement;
 
         el.classList.add('tour-highlight');
         el.scrollIntoView({ behavior: "smooth", block: "center" });

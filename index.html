@@ -60,8 +60,18 @@
                     <input type="text" id="branchName" placeholder="Type Branch Name" style="margin-top:8px;">
                 </div>
 
-                <!-- Removed bulkCard from here -->
-
+                <div class="card bulk-card" id="bulkCard">
+                    <label>⚡ Global Profile Updates<span class="tooltip-icon">i<span class="tooltip-text">Mass-update
+                                the branch or hourly rate for all previous historical shifts
+                                simultaneously.</span></span></label>
+                    <p style="font-size: 11px; margin-bottom: 8px; color: #856404;">Apply new Branch/Rate to all
+                        historical records.</p>
+                    <select id="bulkEmpTarget" style="margin-bottom:8px;">
+                    </select>
+                    <label>Update Hourly Rate to:</label><select id="bulkRateSelect"></select>
+                    <button class="btn-warning" onclick="executeBulkUpdate()" style="width: 100%;">⚡ Execute
+                        Changes</button>
+                </div>
                 <div class="card" id="csvCard">
                     <label>2. Import CSV File<span class="tooltip-icon">i<span class="tooltip-text">Import your
                                 exported CSV file here to instantly synchronize and restore past payroll data into the
@@ -199,20 +209,6 @@
 
             <div id="reportsFiltersContainer"></div>
 
-            <div class="flex-container" style="margin-top: 20px;">
-                <div class="card bulk-card" id="bulkCard">
-                    <label>⚡ Global Profile Updates<span class="tooltip-icon">i<span class="tooltip-text">Mass-update
-                                the branch or hourly rate for all previous historical shifts
-                                simultaneously.</span></span></label>
-                    <p style="font-size: 11px; margin-bottom: 8px; color: #856404;">Apply new Branch/Rate to all
-                        historical records.</p>
-                    <select id="bulkEmpTarget" style="margin-bottom:8px;">
-                    </select>
-                    <label>Update Hourly Rate to:</label><select id="bulkRateSelect"></select>
-                    <button class="btn-warning" onclick="executeBulkUpdate()" style="width: 100%;">⚡ Execute
-                        Changes</button>
-                </div>
-            </div>
 
             <div class="flex-container" style="margin-top: 20px;">
                 <div class="card" style="flex: 1;">

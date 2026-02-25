@@ -84,6 +84,7 @@ function applySettings() {
     const topRow = document.getElementById("topFlexRow");
     const botRow = document.getElementById("botFlexRow");
     const setupCard = document.getElementById("setupCard");
+    const bulkCard = document.getElementById("bulkCard");
     const csvCard = document.getElementById("csvCard");
     const pdfCard = document.getElementById("pdfCard");
     const entryCard = document.getElementById("entryCard");
@@ -94,8 +95,10 @@ function applySettings() {
     if (!appSettings.showPdf && !appSettings.showCsv) {
         topRow.appendChild(setupCard);
         botRow.appendChild(entryCard);
+        botRow.appendChild(bulkCard);
     } else {
         topRow.appendChild(setupCard);
+        topRow.appendChild(bulkCard);
         topRow.appendChild(csvCard);
         botRow.appendChild(pdfCard);
         botRow.appendChild(entryCard);

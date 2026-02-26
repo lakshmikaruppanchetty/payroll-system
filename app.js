@@ -646,6 +646,8 @@ window.importCSV = function () {
                     branch = clean(cols[8]) || "Branch A";
                 }
 
+                if (!name) continue; // safely ignore blank rows masking as padded data structs
+
                 const h = calcH(s1[0], s1[1]) + calcH(s2[0], s2[1]) + calcH(s3[0], s3[1]);
                 const entry = { id: Date.now() + i, name, date, branch, s1s: s1[0] || "", s1e: s1[1] || "", s2s: s2[0] || "", s2e: s2[1] || "", s3s: s3[0] || "", s3e: s3[1] || "", total: h, rate, pay: (h * rate).toFixed(2) };
 
@@ -970,7 +972,26 @@ window.executeBulkUpdate = function () {
 };
 
 function decToT(d) { const h = Math.floor(d), m = Math.round((d - h) * 60); return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`; }
-function calcH(s, e) { if (!s || !e || s.length < 5 || e.length < 5) return 0; let [h1, m1] = s.split(':').map(Number), [h2, m2] = e.split(':').map(Number), st = h1 + (m1 / 60), en = h2 + (m2 / 60); if (en < st) en += 24; return en - st; }
+function calcH(s, e) {
+    if (!s || !e || s.length < 3 || e.length < 3) return 0;
+
+    // forcefully strip invisibles/am-pm bounds to protect the JS number mapping sequence
+    s = s.replace(/[^0-9:]/g, '');
+    e = e.replace(/[^0-9:]/g, '');
+
+    if (s.length < 3 || e.length < 3) return 0;
+
+    let [h1, m1] = s.split(':').map(Number);
+    let [h2, m2] = e.split(':').map(Number);
+
+    if (isNaN(h1) || isNaN(m1) || isNaN(h2) || isNaN(m2)) return 0;
+
+    let st = h1 + (m1 / 60);
+    let en = h2 + (m2 / 60);
+
+    if (en < st) en += 24;
+    return en - st;
+}
 
 window.toggleClockFormat = function () {
     const f = document.getElementById("clockToggle").value;

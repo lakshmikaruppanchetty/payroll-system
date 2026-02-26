@@ -546,10 +546,11 @@ window.addEntry = function () {
 
 window.importCSV = function () {
     const fileInput = document.getElementById('csvImport'); if (!fileInput.files[0]) return;
-    const reader = new FileReader();
-    reader.onload = function (e) {
+    const isExcel = fileInput.files[0].name.toLowerCase().endsWith('.xlsx');
+
+    const processCSVText = (text) => {
         try {
-            const rows = e.target.result.split(/\r?\n/).filter(r => r.trim()); let aC = 0, uC = 0;
+            const rows = text.split(/\r?\n/).filter(r => r.trim()); let aC = 0, uC = 0;
 
             let isNewFormat = false;
             if (rows.length > 1) {
@@ -604,7 +605,7 @@ window.importCSV = function () {
                 if (exIdx > -1) {
                     if (masterData[exIdx].branch !== branch) {
                         if (askMerge === null) {
-                            askMerge = confirm(`CSV contains overlapping dates on different branches. Do you want to MERGE overlapping shifts into single entries? (Cancel generates separate rows per branch)`);
+                            askMerge = confirm(`Data contains overlapping dates on different branches. Do you want to MERGE overlapping shifts into single entries? (Cancel generates separate rows per branch)`);
                         }
                         if (askMerge) {
                             let old = masterData[exIdx];
@@ -626,7 +627,30 @@ window.importCSV = function () {
             localStorage.setItem("payroll_v20", JSON.stringify(masterData)); renderAll(); alert(`Synced: ${aC} new, ${uC} updated/merged.`);
         } catch (e) { alert("Format Error: " + e.message); }
         fileInput.value = '';
-    }; reader.readAsText(fileInput.files[0]);
+    };
+
+    if (isExcel) {
+        if (typeof XLSX === 'undefined') {
+            alert('Excel parser library not loaded. Please ensure you are connected to the internet.');
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const firstSheet = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheet];
+            const csv = XLSX.utils.sheet_to_csv(worksheet);
+            processCSVText(csv);
+        };
+        reader.readAsArrayBuffer(fileInput.files[0]);
+    } else {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            processCSVText(e.target.result);
+        };
+        reader.readAsText(fileInput.files[0]);
+    }
 };
 
 window.updateFilter = function () {

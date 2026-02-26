@@ -593,6 +593,8 @@ window.importCSV = function () {
                 let name, rate, date, branch, s1, s2, s3;
 
                 const normalizeDate = (dStr) => {
+                    if (!dStr) return "";
+                    dStr = dStr.split(' ')[0]; // Strip implicit SheetJS trailing timestamps
                     if (dStr.includes('/')) {
                         const parts = dStr.split('/');
                         if (parts.length >= 3) {
@@ -626,23 +628,32 @@ window.importCSV = function () {
                     return dStr;
                 };
 
+                const parseRate = (val) => {
+                    let r = val;
+                    if (r && r.replace(/[0-9.]/g, '').length > 0) r = r.replace(/[^0-9.]/g, '');
+                    return parseFloat(r) || 0;
+                };
+
+                const parseShift = (val) => {
+                    if (!val || val === "0" || val === "0-0" || val === "0.0" || val === "-") return ["", ""];
+                    return val.split(/\s*[-\/]\s*/);
+                };
+
                 if (isNewFormat) {
                     date = normalizeDate(clean(cols[0]));
                     name = clean(cols[1]);
                     branch = clean(cols[2]) || "Branch A";
-                    s1 = clean(cols[3]).split(/\s*[-\/]\s*/);
-                    s2 = clean(cols[4]).split(/\s*[-\/]\s*/);
-                    s3 = clean(cols[5]).split(/\s*[-\/]\s*/);
-                    let r = clean(cols[7]);
-                    if (r && r.replace(/[0-9.]/g, '').length > 0) r = r.replace(/[^0-9.]/g, '');
-                    rate = parseFloat(r) || 0;
+                    s1 = parseShift(clean(cols[3]));
+                    s2 = parseShift(clean(cols[4]));
+                    s3 = parseShift(clean(cols[5]));
+                    rate = parseRate(clean(cols[7]));
                 } else {
                     name = clean(cols[0]);
-                    rate = parseFloat(clean(cols[1])) || 0;
+                    rate = parseRate(clean(cols[1]));
                     date = normalizeDate(clean(cols[2]));
-                    s1 = clean(cols[3]).split(/\s*[-\/]\s*/);
-                    s2 = clean(cols[4]).split(/\s*[-\/]\s*/);
-                    s3 = clean(cols[5]).split(/\s*[-\/]\s*/);
+                    s1 = parseShift(clean(cols[3]));
+                    s2 = parseShift(clean(cols[4]));
+                    s3 = parseShift(clean(cols[5]));
                     branch = clean(cols[8]) || "Branch A";
                 }
 

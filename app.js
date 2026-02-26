@@ -630,9 +630,9 @@ window.importCSV = function () {
                     date = normalizeDate(clean(cols[0]));
                     name = clean(cols[1]);
                     branch = clean(cols[2]) || "Branch A";
-                    s1 = clean(cols[3]).split('-');
-                    s2 = clean(cols[4]).split('-');
-                    s3 = clean(cols[5]).split('-');
+                    s1 = clean(cols[3]).split(/\s*[-\/]\s*/);
+                    s2 = clean(cols[4]).split(/\s*[-\/]\s*/);
+                    s3 = clean(cols[5]).split(/\s*[-\/]\s*/);
                     let r = clean(cols[7]);
                     if (r && r.replace(/[0-9.]/g, '').length > 0) r = r.replace(/[^0-9.]/g, '');
                     rate = parseFloat(r) || 0;
@@ -640,9 +640,9 @@ window.importCSV = function () {
                     name = clean(cols[0]);
                     rate = parseFloat(clean(cols[1])) || 0;
                     date = normalizeDate(clean(cols[2]));
-                    s1 = clean(cols[3]).split('-');
-                    s2 = clean(cols[4]).split('-');
-                    s3 = clean(cols[5]).split('-');
+                    s1 = clean(cols[3]).split(/\s*[-\/]\s*/);
+                    s2 = clean(cols[4]).split(/\s*[-\/]\s*/);
+                    s3 = clean(cols[5]).split(/\s*[-\/]\s*/);
                     branch = clean(cols[8]) || "Branch A";
                 }
 

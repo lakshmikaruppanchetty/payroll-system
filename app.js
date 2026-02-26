@@ -553,7 +553,9 @@ window.importCSV = function () {
             const rows = text.split(/\r?\n/).filter(r => r.trim()); let aC = 0, uC = 0;
 
             let isNewFormat = false;
-            if (rows.length > 1) {
+            if (rows.length > 0 && rows[0].replace(/"/g, '').toLowerCase().startsWith('date,employee,branch')) {
+                isNewFormat = true;
+            } else if (rows.length > 1) {
                 const firstDataCols = rows[1].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
                 if (firstDataCols[0] && firstDataCols[0].replace(/"/g, '').trim().includes('-') && firstDataCols[0].replace(/"/g, '').trim().length === 10) {
                     isNewFormat = true;
@@ -580,6 +582,16 @@ window.importCSV = function () {
                 let name, rate, date, branch, s1, s2, s3;
                 if (isNewFormat) {
                     date = clean(cols[0]);
+                    if (date.includes('/')) {
+                        const parts = date.split('/');
+                        if (parts.length === 3) {
+                            let m = parts[0].padStart(2, '0');
+                            let d = parts[1].padStart(2, '0');
+                            let y = parts[2];
+                            if (y.length === 2) y = "20" + y;
+                            date = `${y}-${m}-${d}`;
+                        }
+                    }
                     name = clean(cols[1]);
                     branch = clean(cols[2]) || "Branch A";
                     s1 = clean(cols[3]).split('-');
@@ -637,10 +649,10 @@ window.importCSV = function () {
         const reader = new FileReader();
         reader.onload = function (e) {
             const data = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(data, { type: 'array' });
+            const workbook = XLSX.read(data, { type: 'array', cellDates: true });
             const firstSheet = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[firstSheet];
-            const csv = XLSX.utils.sheet_to_csv(worksheet);
+            const csv = XLSX.utils.sheet_to_csv(worksheet, { dateNF: 'yyyy-mm-dd' });
             processCSVText(csv);
         };
         reader.readAsArrayBuffer(fileInput.files[0]);

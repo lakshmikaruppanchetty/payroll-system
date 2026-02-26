@@ -591,10 +591,10 @@ window.importCSV = function () {
                 const clean = (v) => v ? v.replace(/"/g, '').trim() : "";
 
                 let name, rate, date, branch, s1, s2, s3;
-                if (isNewFormat) {
-                    date = clean(cols[0]);
-                    if (date.includes('/')) {
-                        const parts = date.split('/');
+
+                const normalizeDate = (dStr) => {
+                    if (dStr.includes('/')) {
+                        const parts = dStr.split('/');
                         if (parts.length >= 3) {
                             let p1 = parseInt(parts[0], 10) || 1;
                             let p2 = parseInt(parts[1], 10) || 1;
@@ -608,10 +608,10 @@ window.importCSV = function () {
                                 d = p2.toString().padStart(2, '0');
                             }
                             if (y.length === 2 && parseInt(y) >= 0) y = parseInt(y) + 2000 + "";
-                            date = `${y}-${m}-${d}`;
+                            return `${y}-${m}-${d}`;
                         }
-                    } else if (date.includes('-')) {
-                        const parts = date.split('-');
+                    } else if (dStr.includes('-')) {
+                        const parts = dStr.split('-');
                         if (parts.length >= 3 && parts[0].length !== 4) {
                             let p1 = parseInt(parts[0], 10) || 1;
                             let p2 = parseInt(parts[1], 10) || 1;
@@ -620,9 +620,14 @@ window.importCSV = function () {
                             if (p1 > 12) { m = p2.toString().padStart(2, '0'); d = p1.toString().padStart(2, '0'); }
                             else { m = p1.toString().padStart(2, '0'); d = p2.toString().padStart(2, '0'); }
                             if (y.length === 2 && parseInt(y) >= 0) y = parseInt(y) + 2000 + "";
-                            date = `${y}-${m}-${d}`;
+                            return `${y}-${m}-${d}`;
                         }
                     }
+                    return dStr;
+                };
+
+                if (isNewFormat) {
+                    date = normalizeDate(clean(cols[0]));
                     name = clean(cols[1]);
                     branch = clean(cols[2]) || "Branch A";
                     s1 = clean(cols[3]).split('-');
@@ -634,7 +639,7 @@ window.importCSV = function () {
                 } else {
                     name = clean(cols[0]);
                     rate = parseFloat(clean(cols[1])) || 0;
-                    date = clean(cols[2]);
+                    date = normalizeDate(clean(cols[2]));
                     s1 = clean(cols[3]).split('-');
                     s2 = clean(cols[4]).split('-');
                     s3 = clean(cols[5]).split('-');

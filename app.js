@@ -18,6 +18,36 @@ let editingId = null; let selectedId = null;
 let employeeChartInstance = null;
 let branchChartInstance = null;
 
+window.getCurrencySymbol = function () {
+    let pref = localStorage.getItem("preferredCurrency_v20");
+    if (!pref) return "$";
+    if (pref === "custom") return localStorage.getItem("customCurrency_v20") || "$";
+    return pref;
+};
+
+window.handleCurrencyChange = function () {
+    const val = document.getElementById("currencySelect").value;
+    localStorage.setItem("preferredCurrency_v20", val);
+    if (val === "custom") {
+        document.getElementById("customCurrencyContainer").style.display = "block";
+    } else {
+        document.getElementById("customCurrencyContainer").style.display = "none";
+        renderAll();
+    }
+    updateCurrencyLabels();
+};
+
+window.saveCustomCurrency = function () {
+    localStorage.setItem("customCurrency_v20", document.getElementById("customCurrencyInput").value);
+    renderAll();
+    updateCurrencyLabels();
+};
+
+window.updateCurrencyLabels = function () {
+    const sym = getCurrencySymbol();
+    document.querySelectorAll(".currency-label").forEach(el => el.innerText = sym);
+};
+
 window.renderRates = function () {
     const rateSelect = document.getElementById("hourlyRate");
     const bulkRateSelect = document.getElementById("bulkRateSelect");
@@ -32,8 +62,8 @@ window.renderRates = function () {
     if (minR > maxR) maxR = minR;
 
     for (let i = minR; i <= maxR; i++) {
-        let opt1 = document.createElement("option"); opt1.value = i; opt1.text = "$" + i;
-        let opt2 = document.createElement("option"); opt2.value = i; opt2.text = "$" + i;
+        let opt1 = document.createElement("option"); opt1.value = i; opt1.text = getCurrencySymbol() + i;
+        let opt2 = document.createElement("option"); opt2.value = i; opt2.text = getCurrencySymbol() + i;
         if (i === 17) { opt1.selected = true; opt2.selected = true; }
         rateSelect.appendChild(opt1); bulkRateSelect.appendChild(opt2);
     }
@@ -183,7 +213,7 @@ function renderTourStep() {
             tr.id = "dummyTourRow";
             tr.className = "selected";
             tr.style.background = "#e8f4f8";
-            tr.innerHTML = `<td>Sample Date</td><td>Sample Branch</td><td>09:00 - 17:00</td><td>--</td><td>--</td><td>8.00</td><td>$20.00</td><td>$160.00</td><td><button class="btn-warning" style="margin:0; padding: 2px 5px; font-size:10px; cursor: default;">✎ Diff</button></td>`;
+            tr.innerHTML = `<td>Sample Date</td><td>Sample Branch</td><td>09:00 - 17:00</td><td>--</td><td>--</td><td>8.00</td><td>${getCurrencySymbol()}20.00</td><td>${getCurrencySymbol()}160.00</td><td><button class="btn-warning" style="margin:0; padding: 2px 5px; font-size:10px; cursor: default;">✎ Diff</button></td>`;
             if (tbody.firstChild) tbody.insertBefore(tr, tbody.firstChild);
             else tbody.appendChild(tr);
 
@@ -324,6 +354,16 @@ function applySettings() {
         logoContainer.style.display = "none";
         logoUploadSection.style.display = "none";
     }
+
+    let pref = localStorage.getItem("preferredCurrency_v20") || "$";
+    document.getElementById("currencySelect").value = pref;
+    if (pref === "custom") {
+        document.getElementById("customCurrencyContainer").style.display = "block";
+        document.getElementById("customCurrencyInput").value = localStorage.getItem("customCurrency_v20") || "";
+    } else {
+        document.getElementById("customCurrencyContainer").style.display = "none";
+    }
+    updateCurrencyLabels();
 }
 
 function handleLogoUpload() {
@@ -545,7 +585,7 @@ window.importCSV = function () {
                     s2 = clean(cols[4]).split('-');
                     s3 = clean(cols[5]).split('-');
                     let r = clean(cols[7]);
-                    if (r && r.startsWith('$')) r = r.substring(1);
+                    if (r && r.replace(/[0-9.]/g, '').length > 0) r = r.replace(/[^0-9.]/g, '');
                     rate = parseFloat(r) || 0;
                 } else {
                     name = clean(cols[0]);
@@ -665,17 +705,17 @@ window.renderAll = function () {
             curE = e.name; let ent = display.filter(x => x.name === e.name);
             let h = ent.reduce((s, c) => s + c.total, 0), p = ent.reduce((s, c) => s + parseFloat(c.pay), 0);
             const brText = appSettings.showBranch ? ` (${e.branch}) ` : ' ';
-            dailyBody.innerHTML += `<tr class="emp-separator-bar"><td colspan="${hasS3 ? 9 : 8}">${e.name}${brText}| Cumulative: ${decToT(h)} | Pay: $${p.toFixed(2)}</td></tr>`;
+            dailyBody.innerHTML += `<tr class="emp-separator-bar"><td colspan="${hasS3 ? 9 : 8}">${e.name}${brText}| Cumulative: ${decToT(h)} | Pay: ${getCurrencySymbol()}${p.toFixed(2)}</td></tr>`;
         }
         const d = e.date.split('-').slice(1).concat(e.date.split('-')[0]).join('-');
         const brCell = appSettings.showBranch ? `<td>${e.branch}</td>` : '<td style="display:none"></td>';
-        dailyBody.innerHTML += `<tr ${selectedId === e.id ? 'class="selected"' : ''} onclick="selectRow(${e.id}, event)"><td>${d}</td>${brCell}<td>${e.s1s}-${e.s1e}</td><td>${e.s2s}-${e.s2e}</td><td style="display:${hasS3 ? '' : 'none'}">${e.s3s ? e.s3s + '-' + e.s3e : '-'}</td><td>${decToT(e.total)}</td><td>$${e.rate}</td><td>$${e.pay}</td><td><button class="btn-edit-small" onclick="event.stopPropagation(); editEntry(${e.id})">Edit</button><button class="btn-danger-x" onclick="event.stopPropagation(); deleteEntry(${e.id})">×</button></td></tr>`;
+        dailyBody.innerHTML += `<tr ${selectedId === e.id ? 'class="selected"' : ''} onclick="selectRow(${e.id}, event)"><td>${d}</td>${brCell}<td>${e.s1s}-${e.s1e}</td><td>${e.s2s}-${e.s2e}</td><td style="display:${hasS3 ? '' : 'none'}">${e.s3s ? e.s3s + '-' + e.s3e : '-'}</td><td>${decToT(e.total)}</td><td>${getCurrencySymbol()}${e.rate}</td><td>${getCurrencySymbol()}${e.pay}</td><td><button class="btn-edit-small" onclick="event.stopPropagation(); editEntry(${e.id})">Edit</button><button class="btn-danger-x" onclick="event.stopPropagation(); deleteEntry(${e.id})">×</button></td></tr>`;
     });
     const filteredEmps = [...new Set(display.map(e => e.name))];
     filteredEmps.forEach(n => {
         let ent = display.filter(x => x.name === n); let h = ent.reduce((s, c) => s + c.total, 0), p = ent.reduce((s, c) => s + parseFloat(c.pay), 0);
         if (ent.length > 0) {
-            summaryBody.innerHTML += `<tr style="background:#e8f5e9; font-weight:bold;"><td style="text-align:left; padding-left:15px;">${n}</td><td style="text-align:left; padding-left:15px;">${ent[0].branch}</td><td>${decToT(h)}</td><td>$${p.toFixed(2)}</td><td><button class="btn-primary" style="padding: 4px 8px; font-size: 11px; background:#17a2b8;" onclick="generatePayStub('${n}')">📄 PDF</button></td><td><button class="btn-danger-x" onclick="deleteEmployeeBulk('${n}')">Clear All</button></td></tr>`;
+            summaryBody.innerHTML += `<tr style="background:#e8f5e9; font-weight:bold;"><td style="text-align:left; padding-left:15px;">${n}</td><td style="text-align:left; padding-left:15px;">${ent[0].branch}</td><td>${decToT(h)}</td><td>${getCurrencySymbol()}${p.toFixed(2)}</td><td><button class="btn-primary" style="padding: 4px 8px; font-size: 11px; background:#17a2b8;" onclick="generatePayStub('${n}')">📄 PDF</button></td><td><button class="btn-danger-x" onclick="deleteEmployeeBulk('${n}')">Clear All</button></td></tr>`;
         }
     });
 
@@ -687,7 +727,7 @@ window.renderAll = function () {
             let ent = display.filter(x => x.branch === b);
             if (ent.length > 0) {
                 let h = ent.reduce((s, c) => s + c.total, 0), p = ent.reduce((s, c) => s + parseFloat(c.pay), 0);
-                branchSummaryBody.innerHTML += `<tr><td>${b}</td><td>${decToT(h)}</td><td>$${p.toFixed(2)}</td><td><button class="btn-danger-x" onclick="clearBranchSecure('${b}')">Clear All</button></td></tr>`;
+                branchSummaryBody.innerHTML += `<tr><td>${b}</td><td>${decToT(h)}</td><td>${getCurrencySymbol()}${p.toFixed(2)}</td><td><button class="btn-danger-x" onclick="clearBranchSecure('${b}')">Clear All</button></td></tr>`;
             }
         });
     }
@@ -772,7 +812,7 @@ function renderCharts(filteredEmps, displayData) {
     const branchData = filteredBranches.map((b, index) => {
         let ent = displayData.filter(x => x.branch === b);
         let p = ent.reduce((s, c) => s + parseFloat(c.pay), 0);
-        branchLabels.push(`${b} ($${p.toFixed(2)})`);
+        branchLabels.push(`${b} (${getCurrencySymbol()}${p.toFixed(2)})`);
         branchColors.push(colorPalette[index % colorPalette.length]);
         branchBorderColors.push(colorPalette[index % colorPalette.length].replace('0.7', '1'));
         return p;
@@ -785,7 +825,7 @@ function renderCharts(filteredEmps, displayData) {
         data: {
             labels: branchLabels,
             datasets: [{
-                label: 'Total Gross Pay ($)',
+                label: `Total Gross Pay (${getCurrencySymbol()})`,
                 data: branchData,
                 backgroundColor: branchColors,
                 borderColor: branchBorderColors,
@@ -950,7 +990,7 @@ window.exportToExcel = function () {
     });
 
     curData.forEach(d => {
-        csv += `"${d.date}","${d.name}","${d.branch}","${d.s1s}-${d.s1e}","${d.s2s}-${d.s2e}","${d.s3s}-${d.s3e}",${decToT(d.total)},$${d.rate},${d.pay}\n`;
+        csv += `"${d.date}","${d.name}","${d.branch}","${d.s1s}-${d.s1e}","${d.s2s}-${d.s2e}","${d.s3s}-${d.s3e}",${decToT(d.total)},${d.rate},${d.pay}\n`;
     });
 
     csv += "\nSummary Data\n";
@@ -1036,8 +1076,8 @@ window.exportToPDF = function () {
         d.branch,
         `${d.s1s}-${d.s1e}${d.s2s ? '\n' + d.s2s + '-' + d.s2e : ''}${d.s3s ? '\n' + d.s3s + '-' + d.s3e : ''}`,
         decToT(d.total),
-        `$${d.rate}`,
-        `$${d.pay}`
+        `${getCurrencySymbol()}${d.rate}`,
+        `${getCurrencySymbol()}${d.pay}`
     ]);
 
     doc.autoTable({
@@ -1062,7 +1102,7 @@ window.exportToPDF = function () {
             n,
             ent[0].branch,
             decToT(h),
-            `$${p.toFixed(2)}`
+            `${getCurrencySymbol()}${p.toFixed(2)}`
         ];
     });
 
@@ -1359,8 +1399,8 @@ window.generatePayStub = function (employeeName) {
         d.date,
         `${d.s1s}-${d.s1e}${d.s2s ? ', ' + d.s2s + '-' + d.s2e : ''}${d.s3s ? ', ' + d.s3s + '-' + d.s3e : ''}`,
         decToT(d.total),
-        `$${d.rate}`,
-        `$${d.pay}`
+        `${getCurrencySymbol()}${d.rate}`,
+        `${getCurrencySymbol()}${d.pay}`
     ]);
 
     doc.autoTable({
@@ -1381,7 +1421,7 @@ window.generatePayStub = function (employeeName) {
     doc.text(`Total Hours Worked: ${decToT(h)}`, 14, currentY);
     currentY += 7;
     doc.setFontSize(14);
-    doc.text(`Gross Pay: $${p.toFixed(2)}`, 14, currentY);
+    doc.text(`Gross Pay: ${getCurrencySymbol()}${p.toFixed(2)}`, 14, currentY);
 
     doc.save(`PayStub_${employeeName.replace(/\s+/g, '_')}.pdf`);
 };

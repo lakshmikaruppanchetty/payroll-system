@@ -490,6 +490,7 @@ window.duplicateSelected = function (event) {
         document.getElementById("s3start").value = e.s3s; document.getElementById("s3end").value = e.s3e;
         document.getElementById("hourlyRate").value = e.rate;
         window.scrollTo(0, 0); selectedId = null; document.getElementById("floatingDupBtn").style.display = "none"; renderAll();
+        window.isDuplicating = true;
     }
 };
 
@@ -880,9 +881,11 @@ window.checkExistingShifts = function () {
         document.getElementById("s1start").value = e.s1s; document.getElementById("s1end").value = e.s1e; document.getElementById("s2start").value = e.s2s; document.getElementById("s2end").value = e.s2e; document.getElementById("s3start").value = e.s3s; document.getElementById("s3end").value = e.s3e;
         document.getElementById("hourlyRate").value = e.rate; document.getElementById("branchName").value = e.branch;
         editingId = e.id; document.getElementById("mainBtn").innerText = "Update Log";
+        window.isDuplicating = false;
     } else {
-        // Clear old timings since there's no entry for this date
-        ["s1start", "s1end", "s2start", "s2end", "s3start", "s3end"].forEach(id => { if (document.getElementById(id)) document.getElementById(id).value = ""; });
+        if (!window.isDuplicating) {
+            ["s1start", "s1end", "s2start", "s2end", "s3start", "s3end"].forEach(id => { if (document.getElementById(id)) document.getElementById(id).value = ""; });
+        }
         editingId = null;
         document.getElementById("mainBtn").innerText = "Save / Update Log";
     }
@@ -920,7 +923,7 @@ window.toggleClockFormat = function () {
 
 function setupMasks() { document.querySelectorAll('.time-input-24').forEach(i => { i.addEventListener('input', (e) => { let v = e.target.value.replace(/\D/g, ''); if (v.length >= 3) e.target.value = v.slice(0, 2) + ":" + v.slice(2, 4); else e.target.value = v; }); }); }
 
-window.resetShifts = function () { ["s1start", "s1end", "s2start", "s2end", "s3start", "s3end"].forEach(id => { if (document.getElementById(id)) document.getElementById(id).value = ""; }); editingId = null; document.getElementById("workDate").value = ""; document.getElementById("mainBtn").innerText = "Save / Update Log"; };
+window.resetShifts = function () { ["s1start", "s1end", "s2start", "s2end", "s3start", "s3end"].forEach(id => { if (document.getElementById(id)) document.getElementById(id).value = ""; }); editingId = null; document.getElementById("workDate").value = ""; document.getElementById("mainBtn").innerText = "Save / Update Log"; window.isDuplicating = false; };
 window.updateNameFromDropdown = function () {
     const s = document.getElementById("empSelect");
     if (s.value !== "") {

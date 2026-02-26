@@ -553,12 +553,23 @@ window.importCSV = function () {
             const rows = text.split(/\r?\n/).filter(r => r.trim()); let aC = 0, uC = 0;
 
             let isNewFormat = false;
-            if (rows.length > 0 && rows[0].replace(/"/g, '').toLowerCase().startsWith('date,employee,branch')) {
-                isNewFormat = true;
-            } else if (rows.length > 1) {
-                const firstDataCols = rows[1].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-                if (firstDataCols[0] && firstDataCols[0].replace(/"/g, '').trim().includes('-') && firstDataCols[0].replace(/"/g, '').trim().length === 10) {
+            let headerCheck = "";
+            if (rows.length > 0) {
+                headerCheck = rows[0].replace(/["\s]/g, '').toLowerCase();
+                if (headerCheck.includes('date,employee') || headerCheck.includes('date,name') || headerCheck.startsWith('date,')) {
                     isNewFormat = true;
+                }
+            }
+            if (!isNewFormat && rows.length > 1) {
+                const firstDataCols = rows[1].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                if (firstDataCols[0]) {
+                    let c0 = firstDataCols[0].replace(/["\s]/g, '');
+                    if (c0.includes('-') || c0.includes('/')) {
+                        let numerals = c0.replace(/[^0-9]/g, '');
+                        if (numerals.length >= 4 && numerals.length <= 8) {
+                            isNewFormat = true;
+                        }
+                    }
                 }
             }
 
@@ -584,11 +595,31 @@ window.importCSV = function () {
                     date = clean(cols[0]);
                     if (date.includes('/')) {
                         const parts = date.split('/');
-                        if (parts.length === 3) {
-                            let m = parts[0].padStart(2, '0');
-                            let d = parts[1].padStart(2, '0');
-                            let y = parts[2];
-                            if (y.length === 2) y = "20" + y;
+                        if (parts.length >= 3) {
+                            let p1 = parseInt(parts[0], 10) || 1;
+                            let p2 = parseInt(parts[1], 10) || 1;
+                            let y = parts[2].trim();
+                            let m = '', d = '';
+                            if (p1 > 12) {
+                                m = p2.toString().padStart(2, '0');
+                                d = p1.toString().padStart(2, '0');
+                            } else {
+                                m = p1.toString().padStart(2, '0');
+                                d = p2.toString().padStart(2, '0');
+                            }
+                            if (y.length === 2 && parseInt(y) >= 0) y = parseInt(y) + 2000 + "";
+                            date = `${y}-${m}-${d}`;
+                        }
+                    } else if (date.includes('-')) {
+                        const parts = date.split('-');
+                        if (parts.length >= 3 && parts[0].length !== 4) {
+                            let p1 = parseInt(parts[0], 10) || 1;
+                            let p2 = parseInt(parts[1], 10) || 1;
+                            let y = parts[2].trim();
+                            let m = '', d = '';
+                            if (p1 > 12) { m = p2.toString().padStart(2, '0'); d = p1.toString().padStart(2, '0'); }
+                            else { m = p1.toString().padStart(2, '0'); d = p2.toString().padStart(2, '0'); }
+                            if (y.length === 2 && parseInt(y) >= 0) y = parseInt(y) + 2000 + "";
                             date = `${y}-${m}-${d}`;
                         }
                     }

@@ -14,7 +14,6 @@
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <link rel="stylesheet" href="styles.css">
 </head>
 
@@ -76,14 +75,11 @@
                         Changes</button>
                 </div>
                 <div class="card" id="csvCard">
-                    <label>2. Import Data File (CSV/XLSX)<span class="tooltip-icon">i<span class="tooltip-text">Import
-                                your
-                                exported CSV or Excel file here to instantly synchronize and restore past payroll data
-                                into the
+                    <label>2. Import CSV File<span class="tooltip-icon">i<span class="tooltip-text">Import your
+                                exported CSV file here to instantly synchronize and restore past payroll data into the
                                 system.</span></span></label>
-                    <input type="file" id="csvImport" accept=".csv, .xlsx" style="padding: 4px; font-size: 11px;">
-                    <button class="btn-import" onclick="importCSV()" style="margin-top:8px;">📂 Import/Sync
-                        Data</button>
+                    <input type="file" id="csvImport" accept=".csv" style="padding: 4px; font-size: 11px;">
+                    <button class="btn-import" onclick="importCSV()" style="margin-top:8px;">📂 Import/Sync CSV</button>
                     <p style="font-size: 10px; color: #666; margin-top: 5px;">Sync previous data files into your current
                         view.</p>
                 </div>
@@ -350,7 +346,7 @@
                             <input type="checkbox" id="toggleCsv" onchange="saveSettings()">
                             <span class="slider"></span>
                         </label>
-                        <label for="toggleCsv" style="margin: 0; font-size: 14px; cursor: pointer;">Enable Import Data
+                        <label for="toggleCsv" style="margin: 0; font-size: 14px; cursor: pointer;">Enable Import CSV
                             File</label>
                     </div>
                 </div>

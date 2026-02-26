@@ -546,30 +546,16 @@ window.addEntry = function () {
 
 window.importCSV = function () {
     const fileInput = document.getElementById('csvImport'); if (!fileInput.files[0]) return;
-    const isExcel = fileInput.files[0].name.toLowerCase().endsWith('.xlsx');
-
-    const processCSVText = (text) => {
+    const reader = new FileReader();
+    reader.onload = function (e) {
         try {
-            const rows = text.split(/\r?\n/).filter(r => r.trim()); let aC = 0, uC = 0;
+            const rows = e.target.result.split(/\r?\n/).filter(r => r.trim()); let aC = 0, uC = 0;
 
             let isNewFormat = false;
-            let headerCheck = "";
-            if (rows.length > 0) {
-                headerCheck = rows[0].replace(/["\s]/g, '').toLowerCase();
-                if (headerCheck.includes('date,employee') || headerCheck.includes('date,name') || headerCheck.startsWith('date,')) {
-                    isNewFormat = true;
-                }
-            }
-            if (!isNewFormat && rows.length > 1) {
+            if (rows.length > 1) {
                 const firstDataCols = rows[1].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-                if (firstDataCols[0]) {
-                    let c0 = firstDataCols[0].replace(/["\s]/g, '');
-                    if (c0.includes('-') || c0.includes('/')) {
-                        let numerals = c0.replace(/[^0-9]/g, '');
-                        if (numerals.length >= 4 && numerals.length <= 8) {
-                            isNewFormat = true;
-                        }
-                    }
+                if (firstDataCols[0] && firstDataCols[0].replace(/"/g, '').trim().includes('-') && firstDataCols[0].replace(/"/g, '').trim().length === 10) {
+                    isNewFormat = true;
                 }
             }
 
@@ -591,73 +577,25 @@ window.importCSV = function () {
                 const clean = (v) => v ? v.replace(/"/g, '').trim() : "";
 
                 let name, rate, date, branch, s1, s2, s3;
-
-                const normalizeDate = (dStr) => {
-                    if (!dStr) return "";
-                    dStr = dStr.split(' ')[0]; // Strip implicit SheetJS trailing timestamps
-                    if (dStr.includes('/')) {
-                        const parts = dStr.split('/');
-                        if (parts.length >= 3) {
-                            let p1 = parseInt(parts[0], 10) || 1;
-                            let p2 = parseInt(parts[1], 10) || 1;
-                            let y = parts[2].trim();
-                            let m = '', d = '';
-                            if (p1 > 12) {
-                                m = p2.toString().padStart(2, '0');
-                                d = p1.toString().padStart(2, '0');
-                            } else {
-                                m = p1.toString().padStart(2, '0');
-                                d = p2.toString().padStart(2, '0');
-                            }
-                            if (y.length === 2 && parseInt(y) >= 0) y = parseInt(y) + 2000 + "";
-                            return `${y}-${m}-${d}`;
-                        }
-                    } else if (dStr.includes('-')) {
-                        const parts = dStr.split('-');
-                        if (parts.length >= 3 && parts[0].length !== 4) {
-                            let p1 = parseInt(parts[0], 10) || 1;
-                            let p2 = parseInt(parts[1], 10) || 1;
-                            let y = parts[2].trim();
-                            let m = '', d = '';
-                            if (p1 > 12) { m = p2.toString().padStart(2, '0'); d = p1.toString().padStart(2, '0'); }
-                            else { m = p1.toString().padStart(2, '0'); d = p2.toString().padStart(2, '0'); }
-                            if (y.length === 2 && parseInt(y) >= 0) y = parseInt(y) + 2000 + "";
-                            return `${y}-${m}-${d}`;
-                        }
-                    }
-                    return dStr;
-                };
-
-                const parseRate = (val) => {
-                    let r = val;
-                    if (r && r.replace(/[0-9.]/g, '').length > 0) r = r.replace(/[^0-9.]/g, '');
-                    return parseFloat(r) || 0;
-                };
-
-                const parseShift = (val) => {
-                    if (!val || val === "0" || val === "0-0" || val === "0.0" || val === "-") return ["", ""];
-                    return val.split(/\s*[-\/]\s*/);
-                };
-
                 if (isNewFormat) {
-                    date = normalizeDate(clean(cols[0]));
+                    date = clean(cols[0]);
                     name = clean(cols[1]);
                     branch = clean(cols[2]) || "Branch A";
-                    s1 = parseShift(clean(cols[3]));
-                    s2 = parseShift(clean(cols[4]));
-                    s3 = parseShift(clean(cols[5]));
-                    rate = parseRate(clean(cols[7]));
+                    s1 = clean(cols[3]).split('-');
+                    s2 = clean(cols[4]).split('-');
+                    s3 = clean(cols[5]).split('-');
+                    let r = clean(cols[7]);
+                    if (r && r.replace(/[0-9.]/g, '').length > 0) r = r.replace(/[^0-9.]/g, '');
+                    rate = parseFloat(r) || 0;
                 } else {
                     name = clean(cols[0]);
-                    rate = parseRate(clean(cols[1]));
-                    date = normalizeDate(clean(cols[2]));
-                    s1 = parseShift(clean(cols[3]));
-                    s2 = parseShift(clean(cols[4]));
-                    s3 = parseShift(clean(cols[5]));
+                    rate = parseFloat(clean(cols[1])) || 0;
+                    date = clean(cols[2]);
+                    s1 = clean(cols[3]).split('-');
+                    s2 = clean(cols[4]).split('-');
+                    s3 = clean(cols[5]).split('-');
                     branch = clean(cols[8]) || "Branch A";
                 }
-
-                if (!name) continue; // safely ignore blank rows masking as padded data structs
 
                 const h = calcH(s1[0], s1[1]) + calcH(s2[0], s2[1]) + calcH(s3[0], s3[1]);
                 const entry = { id: Date.now() + i, name, date, branch, s1s: s1[0] || "", s1e: s1[1] || "", s2s: s2[0] || "", s2e: s2[1] || "", s3s: s3[0] || "", s3e: s3[1] || "", total: h, rate, pay: (h * rate).toFixed(2) };
@@ -666,7 +604,7 @@ window.importCSV = function () {
                 if (exIdx > -1) {
                     if (masterData[exIdx].branch !== branch) {
                         if (askMerge === null) {
-                            askMerge = confirm(`Data contains overlapping dates on different branches. Do you want to MERGE overlapping shifts into single entries? (Cancel generates separate rows per branch)`);
+                            askMerge = confirm(`CSV contains overlapping dates on different branches. Do you want to MERGE overlapping shifts into single entries? (Cancel generates separate rows per branch)`);
                         }
                         if (askMerge) {
                             let old = masterData[exIdx];
@@ -688,30 +626,7 @@ window.importCSV = function () {
             localStorage.setItem("payroll_v20", JSON.stringify(masterData)); renderAll(); alert(`Synced: ${aC} new, ${uC} updated/merged.`);
         } catch (e) { alert("Format Error: " + e.message); }
         fileInput.value = '';
-    };
-
-    if (isExcel) {
-        if (typeof XLSX === 'undefined') {
-            alert('Excel parser library not loaded. Please ensure you are connected to the internet.');
-            return;
-        }
-        const reader = new FileReader();
-        reader.onload = function (e) {
-            const data = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(data, { type: 'array', cellDates: true });
-            const firstSheet = workbook.SheetNames[0];
-            const worksheet = workbook.Sheets[firstSheet];
-            const csv = XLSX.utils.sheet_to_csv(worksheet, { dateNF: 'yyyy-mm-dd' });
-            processCSVText(csv);
-        };
-        reader.readAsArrayBuffer(fileInput.files[0]);
-    } else {
-        const reader = new FileReader();
-        reader.onload = function (e) {
-            processCSVText(e.target.result);
-        };
-        reader.readAsText(fileInput.files[0]);
-    }
+    }; reader.readAsText(fileInput.files[0]);
 };
 
 window.updateFilter = function () {
@@ -983,26 +898,7 @@ window.executeBulkUpdate = function () {
 };
 
 function decToT(d) { const h = Math.floor(d), m = Math.round((d - h) * 60); return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`; }
-function calcH(s, e) {
-    if (!s || !e || s.length < 3 || e.length < 3) return 0;
-
-    // forcefully strip invisibles/am-pm bounds to protect the JS number mapping sequence
-    s = s.replace(/[^0-9:]/g, '');
-    e = e.replace(/[^0-9:]/g, '');
-
-    if (s.length < 3 || e.length < 3) return 0;
-
-    let [h1, m1] = s.split(':').map(Number);
-    let [h2, m2] = e.split(':').map(Number);
-
-    if (isNaN(h1) || isNaN(m1) || isNaN(h2) || isNaN(m2)) return 0;
-
-    let st = h1 + (m1 / 60);
-    let en = h2 + (m2 / 60);
-
-    if (en < st) en += 24;
-    return en - st;
-}
+function calcH(s, e) { if (!s || !e || s.length < 5 || e.length < 5) return 0; let [h1, m1] = s.split(':').map(Number), [h2, m2] = e.split(':').map(Number), st = h1 + (m1 / 60), en = h2 + (m2 / 60); if (en < st) en += 24; return en - st; }
 
 window.toggleClockFormat = function () {
     const f = document.getElementById("clockToggle").value;

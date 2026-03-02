@@ -75,9 +75,13 @@
                         Changes</button>
                 </div>
                 <div class="card" id="csvCard">
-                    <label>2. Import CSV File<span class="tooltip-icon">i<span class="tooltip-text">Import your
-                                exported CSV file here to instantly synchronize and restore past payroll data into the
-                                system.</span></span></label>
+                    <label>2. Import CSV File<span class="tooltip-icon tooltip-bottom">i<span
+                                class="tooltip-text">Import new CSV files
+                                or synchronize past exports.<br><br><b>Column Order:</b><br>1. Date<br>2. Name<br>3.
+                                Branch<br>4. Shift 1<br>5. Shift 2<br>6. Shift 3<br><i>(Optional array: Shift 4 & Shift
+                                    5 if enabled)</i><br>7. Hourly Rate<br><br><i>Note: Do
+                                    not rearrange columns. 'Total Hours' and 'Total Pay' can be included at their
+                                    designated original locations if migrating.</i></span></span></label>
                     <input type="file" id="csvImport" accept=".csv" style="padding: 4px; font-size: 11px;">
                     <button class="btn-import" onclick="importCSV()" style="margin-top:8px;">📂 Import/Sync CSV</button>
                     <p style="font-size: 10px; color: #666; margin-top: 5px;">Sync previous data files into your current
@@ -125,6 +129,12 @@
                     </div>
                     <div class="input-group"><label>Shift 3</label>
                         <div class="time-row" id="s3_row"></div>
+                    </div>
+                    <div class="input-group" id="s4_container" style="display:none;"><label>Shift 4</label>
+                        <div class="time-row" id="s4_row"></div>
+                    </div>
+                    <div class="input-group" id="s5_container" style="display:none;"><label>Shift 5</label>
+                        <div class="time-row" id="s5_row"></div>
                     </div>
                     <div class="input-group"><label>Hourly Rate</label><select id="hourlyRate"></select></div>
 
@@ -195,6 +205,8 @@
                         <th>Shift 1</th>
                         <th>Shift 2</th>
                         <th id="shift3Header">Shift 3</th>
+                        <th id="shift4Header" style="display:none;">Shift 4</th>
+                        <th id="shift5Header" style="display:none;">Shift 5</th>
                         <th>Hrs</th>
                         <th>Rate</th>
                         <th>Pay</th>
@@ -326,6 +338,14 @@
                     </div>
                     <div class="toggle-box" style="padding-top: 5px;">
                         <label class="switch">
+                            <input type="checkbox" id="toggleExtendedShifts" onchange="saveSettings()">
+                            <span class="slider"></span>
+                        </label>
+                        <label for="toggleExtendedShifts" style="margin: 0; font-size: 14px; cursor: pointer;">Enable
+                            Extended Shifts (4+)</label>
+                    </div>
+                    <div class="toggle-box" style="padding-top: 5px;">
+                        <label class="switch">
                             <input type="checkbox" id="togglePdf" onchange="saveSettings()">
                             <span class="slider"></span>
                         </label>
@@ -454,7 +474,8 @@
                         entry, saving crucial time on repetitive input combinations.</li>
                     <li style="margin-bottom: 15px;"><strong>Granular Visibility Toggles:</strong> <br>Toggle exactly
                         what modules you wish to see at any given moment via the new expanded Settings Panel, enabling
-                        customized analytics views down to the individual module level.</li>
+                        customized analytics views down to the individual module level. Includes the ability to
+                        dynamically unlock advanced extended shift logs (Shift 4 & 5) when needed.</li>
                     <li style="margin-bottom: 15px;"><strong>Secure Data Storage:</strong> <br>All information,
                         including configuration keys, exists entirely within your browser's persistent `localStorage`.
                         Zero system databases exist to be compromised.</li>
@@ -463,7 +484,7 @@
                         representing Gross Pay and Total Hours, completely auto-calculated with active data boundaries.
                     </li>
                 </ul>
-                <p style="text-align: center; margin-top: 35px; color: #aaa; font-size: 11px;">Version 20.7 • Built with
+                <p style="text-align: center; margin-top: 35px; color: #aaa; font-size: 11px;">Version 20.8 • Built with
                     HTML5 + Frontend Javascript</p>
             </div>
         </div>
@@ -471,7 +492,7 @@
 
     <div style="position: fixed; bottom: 10px; left: 15px; text-align: left; font-size: 14px; font-weight: bold; color: #888; pointer-events: none; z-index: 9999;"
         id="globalFooter">
-        v20.7
+        v20.8
     </div>
 
     <!-- Guided Tour HTML -->

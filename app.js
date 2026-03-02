@@ -6,6 +6,7 @@ appSettings.showPdf = appSettings.showPdf ?? true;
 appSettings.showCsv = appSettings.showCsv ?? true;
 appSettings.showExportPdf = appSettings.showExportPdf ?? true;
 appSettings.showLogo = appSettings.showLogo ?? false;
+appSettings.showExtendedShifts = appSettings.showExtendedShifts ?? false;
 appSettings.companyLogo = appSettings.companyLogo ?? null;
 appSettings.minRate = appSettings.minRate ?? 15;
 appSettings.maxRate = appSettings.maxRate ?? 35;
@@ -259,6 +260,7 @@ function saveSettings() {
     appSettings.showCsv = document.getElementById("toggleCsv").checked;
     appSettings.showExportPdf = document.getElementById("toggleExportPdf").checked;
     appSettings.showLogo = document.getElementById("toggleLogo").checked;
+    appSettings.showExtendedShifts = document.getElementById("toggleExtendedShifts").checked;
     appSettings.ocrEngine = document.getElementById("ocrEngineSelect").value;
     appSettings.llmApiKey = document.getElementById("llmApiKey").value;
     appSettings.geminiApiKey = document.getElementById("geminiApiKey").value;
@@ -268,6 +270,7 @@ function saveSettings() {
     localStorage.setItem("settings_v20", JSON.stringify(appSettings));
     applySettings();
     renderRates();
+    renderAll();
 }
 
 function applySettings() {
@@ -320,6 +323,12 @@ function applySettings() {
     document.getElementById("toggleExportPdf").checked = appSettings.showExportPdf;
     document.getElementById("btnExportPdf").style.display = appSettings.showExportPdf ? "" : "none";
     document.getElementById("toggleLogo").checked = appSettings.showLogo;
+
+    if (document.getElementById("toggleExtendedShifts")) {
+        document.getElementById("toggleExtendedShifts").checked = appSettings.showExtendedShifts;
+    }
+    document.getElementById("s4_container").style.display = appSettings.showExtendedShifts ? "block" : "none";
+    document.getElementById("s5_container").style.display = appSettings.showExtendedShifts ? "block" : "none";
 
     let engine = appSettings.ocrEngine;
     if (engine === 'llm') engine = 'openai';
@@ -488,6 +497,8 @@ window.duplicateSelected = function (event) {
         document.getElementById("s1start").value = e.s1s; document.getElementById("s1end").value = e.s1e;
         document.getElementById("s2start").value = e.s2s; document.getElementById("s2end").value = e.s2e;
         document.getElementById("s3start").value = e.s3s; document.getElementById("s3end").value = e.s3e;
+        if (document.getElementById("s4start")) { document.getElementById("s4start").value = e.s4s || ""; document.getElementById("s4end").value = e.s4e || ""; }
+        if (document.getElementById("s5start")) { document.getElementById("s5start").value = e.s5s || ""; document.getElementById("s5end").value = e.s5e || ""; }
         document.getElementById("hourlyRate").value = e.rate;
         window.scrollTo(0, 0); selectedId = null; document.getElementById("floatingDupBtn").style.display = "none"; renderAll();
         window.isDuplicating = true;
@@ -509,7 +520,9 @@ window.addEntry = function () {
                 const ns1e = document.getElementById("s1end").value;
                 if (!dup.s2s && ns1s) { dup.s2s = ns1s; dup.s2e = ns1e; }
                 else if (!dup.s3s && ns1s) { dup.s3s = ns1s; dup.s3e = ns1e; }
-                dup.total = calcH(dup.s1s, dup.s1e) + calcH(dup.s2s, dup.s2e) + calcH(dup.s3s, dup.s3e);
+                else if (!dup.s4s && ns1s && appSettings.showExtendedShifts) { dup.s4s = ns1s; dup.s4e = ns1e; }
+                else if (!dup.s5s && ns1s && appSettings.showExtendedShifts) { dup.s5s = ns1s; dup.s5e = ns1e; }
+                dup.total = calcH(dup.s1s, dup.s1e) + calcH(dup.s2s, dup.s2e) + calcH(dup.s3s, dup.s3e) + (appSettings.showExtendedShifts ? calcH(dup.s4s, dup.s4e) + calcH(dup.s5s, dup.s5e) : 0);
                 dup.pay = (dup.total * dup.rate).toFixed(2);
                 localStorage.setItem("payroll_v20", JSON.stringify(masterData));
                 resetShifts(); renderAll(); return;
@@ -519,9 +532,24 @@ window.addEntry = function () {
         }
     }
     if (editingId && !confirm(`Update record?`)) return;
-    const h = calcH(document.getElementById("s1start").value, document.getElementById("s1end").value) + calcH(document.getElementById("s2start").value, document.getElementById("s2end").value) + calcH(document.getElementById("s3start").value, document.getElementById("s3end").value);
+    let s4s = document.getElementById("s4start") ? document.getElementById("s4start").value : "";
+    let s4e = document.getElementById("s4end") ? document.getElementById("s4end").value : "";
+    let s5s = document.getElementById("s5start") ? document.getElementById("s5start").value : "";
+    let s5e = document.getElementById("s5end") ? document.getElementById("s5end").value : "";
+
+    const h = calcH(document.getElementById("s1start").value, document.getElementById("s1end").value) +
+        calcH(document.getElementById("s2start").value, document.getElementById("s2end").value) +
+        calcH(document.getElementById("s3start").value, document.getElementById("s3end").value) +
+        (appSettings.showExtendedShifts ? calcH(s4s, s4e) + calcH(s5s, s5e) : 0);
     const rate = parseFloat(document.getElementById("hourlyRate").value);
-    const entry = { id: editingId || Date.now(), name, date, branch, s1s: document.getElementById("s1start").value, s1e: document.getElementById("s1end").value, s2s: document.getElementById("s2start").value, s2e: document.getElementById("s2end").value, s3s: document.getElementById("s3start").value, s3e: document.getElementById("s3end").value, total: h, rate, pay: (h * rate).toFixed(2) };
+    const entry = {
+        id: editingId || Date.now(), name, date, branch,
+        s1s: document.getElementById("s1start").value, s1e: document.getElementById("s1end").value,
+        s2s: document.getElementById("s2start").value, s2e: document.getElementById("s2end").value,
+        s3s: document.getElementById("s3start").value, s3e: document.getElementById("s3end").value,
+        s4s: s4s, s4e: s4e, s5s: s5s, s5e: s5e,
+        total: h, rate, pay: (h * rate).toFixed(2)
+    };
     if (editingId) masterData = masterData.filter(e => e.id !== editingId);
     masterData.push(entry); localStorage.setItem("payroll_v20", JSON.stringify(masterData));
 
@@ -550,13 +578,50 @@ window.importCSV = function () {
     const reader = new FileReader();
     reader.onload = function (e) {
         try {
-            const rows = e.target.result.split(/\r?\n/).filter(r => r.trim()); let aC = 0, uC = 0;
+            const rawText = e.target.result;
+            const rows = [];
+            let inQ = false;
+            let currentLine = "";
+            for (let i = 0; i < rawText.length; i++) {
+                const char = rawText[i];
+                if (char === '"') inQ = !inQ;
+
+                if (char === '\n' && !inQ) {
+                    if (currentLine.trim()) rows.push(currentLine);
+                    currentLine = "";
+                } else if (char === '\r' && !inQ) {
+                    if (rawText[i + 1] === '\n') i++;
+                    if (currentLine.trim()) rows.push(currentLine);
+                    currentLine = "";
+                } else {
+                    currentLine += char;
+                }
+            }
+            if (currentLine.trim()) rows.push(currentLine);
+            let aC = 0, uC = 0;
 
             let isNewFormat = false;
-            if (rows.length > 1) {
-                const firstDataCols = rows[1].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-                if (firstDataCols[0] && firstDataCols[0].replace(/"/g, '').trim().includes('-') && firstDataCols[0].replace(/"/g, '').trim().length === 10) {
+            let mapIdx = null;
+            if (rows.length > 0) {
+                const headStr = rows[0].replace(/"/g, '').trim().toLowerCase();
+                if (headStr.includes('date') || headStr.includes('employee')) {
                     isNewFormat = true;
+                    mapIdx = { s4: -1, s5: -1, rate: -1 };
+                    let hCols = rows[0].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(v => v.replace(/"/g, '').trim().toLowerCase());
+                    mapIdx.date = hCols.findIndex(h => h.includes('date'));
+                    mapIdx.name = hCols.findIndex(h => h.includes('employee') || h.includes('name'));
+                    mapIdx.branch = hCols.findIndex(h => h.includes('branch'));
+                    mapIdx.s1 = hCols.findIndex(h => h.includes('shift 1') || h.includes('s1') || h.includes('shift1'));
+                    mapIdx.s2 = hCols.findIndex(h => h.includes('shift 2') || h.includes('s2') || h.includes('shift2'));
+                    mapIdx.s3 = hCols.findIndex(h => h.includes('shift 3') || h.includes('s3') || h.includes('shift3'));
+                    mapIdx.s4 = hCols.findIndex(h => h.includes('shift 4') || h.includes('s4') || h.includes('shift4'));
+                    mapIdx.s5 = hCols.findIndex(h => h.includes('shift 5') || h.includes('s5') || h.includes('shift5'));
+                    mapIdx.rate = hCols.findIndex(h => h.includes('rate'));
+                } else if (rows.length > 1) {
+                    const firstDataCols = rows[1].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                    if (firstDataCols[0] && firstDataCols[0].replace(/"/g, '').trim().includes('-') && firstDataCols[0].replace(/"/g, '').trim().length === 10) {
+                        isNewFormat = true;
+                    }
                 }
             }
 
@@ -574,32 +639,152 @@ window.importCSV = function () {
                     else current += char;
                 }
                 cols.push(current);
-                if (cols.length < 5) continue;
+                if (cols.length < 3) continue;
                 const clean = (v) => v ? v.replace(/"/g, '').trim() : "";
 
-                let name, rate, date, branch, s1, s2, s3;
+                function formatDate(str_val) {
+                    if (!str_val) return "";
+                    let p;
+                    if (str_val.includes('/')) p = str_val.split('/');
+                    else if (str_val.includes('-')) p = str_val.split('-');
+                    else return str_val;
+                    if (p.length !== 3) return str_val;
+
+                    let y = parseInt(p[2], 10);
+                    if (y < 100) y += 2000;
+
+                    // Assumes M/D/Y or M-D-Y format generally in USA, but if it looks like Y-M-D it leaves it.
+                    if (str_val.includes('-') && p[0].length === 4) {
+                        return `${p[0]}-${p[1].padStart(2, '0')}-${p[2].padStart(2, '0')}`;
+                    }
+                    return `${y.toString()}-${p[0].padStart(2, '0')}-${p[1].padStart(2, '0')}`;
+                }
+
+                function timeTo24(str_val) {
+                    if (!str_val || str_val.length < 3) return str_val;
+                    let up = str_val.toUpperCase();
+                    if (!up.includes('AM') && !up.includes('PM')) {
+                        let cleanStr = str_val.replace(/[^0-9:]/g, '');
+                        return cleanStr.length > 0 ? cleanStr : str_val;
+                    }
+                    let parts = str_val.replace(/[^0-9:]/g, '').split(':');
+                    if (parts.length !== 2) return str_val;
+                    let h1 = parseInt(parts[0], 10);
+                    let m1 = parseInt(parts[1], 10);
+                    if (up.includes('PM') && h1 !== 12) h1 += 12;
+                    if (up.includes('AM') && h1 === 12) h1 = 0;
+                    return [h1.toString().padStart(2, '0'), m1.toString().padStart(2, '0')].join(':');
+                }
+
+                const extractShift = (val) => {
+                    let v = clean(val);
+                    if (!v || v === '-') return ["", ""];
+                    v = v.replace(/\n|\r/g, ' '); // simple collapse as fallback natively
+                    let match = v.match(/^(.*?)\s*-\s*(.*)$/);
+                    if (!match) match = v.match(/^(.*?)\s*to\s*(.*)$/);
+                    if (match) return [timeTo24(match[1].trim()), timeTo24(match[2].trim())];
+                    let parts = v.split('-');
+                    if (parts.length === 1) return [timeTo24(parts[0].trim()), ""];
+                    return [timeTo24(parts[0].trim()), timeTo24(parts[1].trim())];
+                };
+
+                const extractMultipleShifts = (val) => {
+                    let v = clean(val);
+                    if (!v || v === '-') return [];
+                    let shifts = v.split(/[\n,;]+/);
+                    let res = [];
+                    shifts.forEach(s => {
+                        let ss = s.trim();
+                        if (!ss || ss === '-') return;
+                        let m = ss.match(/(.*?)\s*-\s*(.*)/);
+                        if (!m) m = ss.match(/(.*?)\s*to\s*(.*)/);
+                        if (m) res.push([timeTo24(m[1].trim()), timeTo24(m[2].trim())]);
+                        else {
+                            let p = ss.split('-');
+                            if (p.length === 1) res.push([timeTo24(p[0].trim()), ""]);
+                            else res.push([timeTo24(p[0].trim()), timeTo24(p[1].trim())]);
+                        }
+                    });
+                    return res.filter(r => r[0] || r[1]);
+                };
+
+                let name, rate, date, branch, s1, s2, s3, s4 = [""], s5 = [""];
                 if (isNewFormat) {
-                    date = clean(cols[0]);
-                    name = clean(cols[1]);
-                    branch = clean(cols[2]) || "Branch A";
-                    s1 = clean(cols[3]).split('-');
-                    s2 = clean(cols[4]).split('-');
-                    s3 = clean(cols[5]).split('-');
-                    let r = clean(cols[7]);
-                    if (r && r.replace(/[0-9.]/g, '').length > 0) r = r.replace(/[^0-9.]/g, '');
-                    rate = parseFloat(r) || 0;
+                    if (mapIdx && mapIdx.date > -1) {
+                        date = formatDate(clean(cols[mapIdx.date]));
+                        name = mapIdx.name > -1 ? clean(cols[mapIdx.name]) : clean(cols[1]);
+                        branch = mapIdx.branch > -1 ? clean(cols[mapIdx.branch]) : (clean(cols[2]) || "Branch A");
+
+                        let rawShifts = [];
+                        let potentialRates = [];
+
+                        for (let k = 3; k < cols.length; k++) {
+                            let cell = clean(cols[k]);
+                            if (!cell) continue;
+
+                            let hasTimeMatch = cell.match(/[0-9]{1,2}[:.]?[0-9]{0,2}\s*(am|pm|AM|PM)?\s*(to|-)\s*[0-9]{1,2}[:.]?[0-9]{0,2}\s*(am|pm|AM|PM)?/);
+                            if (hasTimeMatch) {
+                                let multi = extractMultipleShifts(cell);
+                                rawShifts.push(...multi);
+                            } else {
+                                let numClean = cell.replace(/[$£€\s]/g, '');
+                                if (/^[0-9]+(\.[0-9]+)?$/.test(numClean)) {
+                                    potentialRates.push(numClean);
+                                } else if (/[0-9]{1,2}:[0-9]{2}/.test(cell) || /[0-9]{1,2}\s*(am|pm|AM|PM)/.test(cell)) {
+                                    rawShifts.push(extractShift(cell));
+                                }
+                            }
+                        }
+
+                        s1 = rawShifts[0] || ["", ""];
+                        s2 = rawShifts[1] || ["", ""];
+                        s3 = rawShifts[2] || ["", ""];
+                        s4 = rawShifts[3] || ["", ""];
+                        s5 = rawShifts[4] || ["", ""];
+
+                        let rStr = "";
+                        if (mapIdx.rate > -1 && mapIdx.rate < cols.length) rStr = clean(cols[mapIdx.rate]);
+                        if (!rStr || isNaN(parseFloat(rStr.replace(/[^0-9.]/g, '')))) {
+                            if (potentialRates.length >= 3) rStr = potentialRates[potentialRates.length - 2];
+                            else if (potentialRates.length === 2) rStr = potentialRates[0];
+                            else if (potentialRates.length === 1) rStr = potentialRates[0];
+                        }
+                        if (rStr && rStr.replace(/[0-9.]/g, '').length > 0) rStr = rStr.replace(/[^0-9.]/g, '');
+                        rate = parseFloat(rStr) || 0;
+                    } else {
+                        date = formatDate(clean(cols[0]));
+                        name = clean(cols[1]);
+                        branch = clean(cols[2]) || "Branch A";
+                        s1 = extractShift(cols[3]);
+                        s2 = extractShift(cols[4]);
+                        s3 = extractShift(cols[5]);
+                        let r;
+                        if (cols.length >= 11) {
+                            s4 = extractShift(cols[6]);
+                            s5 = extractShift(cols[7]);
+                            r = clean(cols[9]);
+                        } else if (cols.length >= 9) {
+                            r = clean(cols[7]);
+                        } else if (cols.length === 7 || (cols.length === 8 && cols[7] === "")) {
+                            r = clean(cols[6]);
+                        } else {
+                            r = clean(cols[7]) || clean(cols[6]);
+                        }
+                        if (r && r.replace(/[0-9.]/g, '').length > 0) r = r.replace(/[^0-9.]/g, '');
+                        rate = parseFloat(r) || 0;
+                    }
                 } else {
                     name = clean(cols[0]);
                     rate = parseFloat(clean(cols[1])) || 0;
-                    date = clean(cols[2]);
-                    s1 = clean(cols[3]).split('-');
-                    s2 = clean(cols[4]).split('-');
-                    s3 = clean(cols[5]).split('-');
+                    date = formatDate(clean(cols[2]));
+                    s1 = extractShift(cols[3]);
+                    s2 = extractShift(cols[4]);
+                    s3 = extractShift(cols[5]);
                     branch = clean(cols[8]) || "Branch A";
                 }
 
-                const h = calcH(s1[0], s1[1]) + calcH(s2[0], s2[1]) + calcH(s3[0], s3[1]);
-                const entry = { id: Date.now() + i, name, date, branch, s1s: s1[0] || "", s1e: s1[1] || "", s2s: s2[0] || "", s2e: s2[1] || "", s3s: s3[0] || "", s3e: s3[1] || "", total: h, rate, pay: (h * rate).toFixed(2) };
+                const h = calcH(s1[0], s1[1]) + calcH(s2[0], s2[1]) + calcH(s3[0], s3[1]) + calcH(s4[0], s4[1]) + calcH(s5[0], s5[1]);
+                const entry = { id: Date.now() + i, name, date, branch, s1s: s1[0] || "", s1e: s1[1] || "", s2s: s2[0] || "", s2e: s2[1] || "", s3s: s3[0] || "", s3e: s3[1] || "", s4s: s4[0] || "", s4e: s4[1] || "", s5s: s5[0] || "", s5e: s5[1] || "", total: h, rate, pay: (h * rate).toFixed(2) };
 
                 const exIdx = masterData.findIndex(ex => ex.name === name && ex.date === date);
                 if (exIdx > -1) {
@@ -611,7 +796,9 @@ window.importCSV = function () {
                             let old = masterData[exIdx];
                             if (!old.s2s && s1[0]) { old.s2s = s1[0] || ""; old.s2e = s1[1] || ""; }
                             else if (!old.s3s && s1[0]) { old.s3s = s1[0] || ""; old.s3e = s1[1] || ""; }
-                            old.total = calcH(old.s1s, old.s1e) + calcH(old.s2s, old.s2e) + calcH(old.s3s, old.s3e);
+                            else if (!old.s4s && s1[0]) { old.s4s = s1[0] || ""; old.s4e = s1[1] || ""; }
+                            else if (!old.s5s && s1[0]) { old.s5s = s1[0] || ""; old.s5e = s1[1] || ""; }
+                            old.total = calcH(old.s1s, old.s1e) + calcH(old.s2s, old.s2e) + calcH(old.s3s, old.s3e) + calcH(old.s4s, old.s4e) + calcH(old.s5s, old.s5e);
                             old.pay = (old.total * old.rate).toFixed(2);
                             uC++;
                         } else {
@@ -624,7 +811,21 @@ window.importCSV = function () {
                     masterData.push(entry); aC++;
                 }
             }
-            localStorage.setItem("payroll_v20", JSON.stringify(masterData)); renderAll(); alert(`Synced: ${aC} new, ${uC} updated/merged.`);
+            masterData.sort((a, b) => b.date.localeCompare(a.date));
+            localStorage.setItem("payroll_v20", JSON.stringify(masterData));
+
+            // Force table filters completely open
+            document.getElementById("viewFilter").value = "ALL";
+            document.getElementById("branchFilter").value = "ALL";
+            if (document.getElementById("dateFilterPreset")) {
+                document.getElementById("dateFilterPreset").value = "custom";
+            }
+            document.getElementById("filterStartDate").value = "";
+            document.getElementById("filterEndDate").value = "";
+            document.getElementById("customDateInputs").style.display = "none";
+
+            renderAll();
+            alert(`Synced: ${aC} new, ${uC} updated/merged.`);
         } catch (e) { alert("Format Error: " + e.message); }
         fileInput.value = '';
     }; reader.readAsText(fileInput.files[0]);
@@ -654,6 +855,8 @@ window.renderAll = function () {
     const vEmp = document.getElementById("viewFilter").value; const vBranch = document.getElementById("branchFilter").value;
     dailyBody.innerHTML = ""; summaryBody.innerHTML = "";
     let hasS3 = masterData.some(e => e.s3s && e.s3s.length >= 4); document.getElementById("shift3Header").style.display = hasS3 ? "" : "none";
+    let hasS4 = masterData.some(e => e.s4s && e.s4s.length >= 4); document.getElementById("shift4Header").style.display = hasS4 ? "" : "none";
+    let hasS5 = masterData.some(e => e.s5s && e.s5s.length >= 4); document.getElementById("shift5Header").style.display = hasS5 ? "" : "none";
     masterData.sort((a, b) => a.name.localeCompare(b.name) || a.date.localeCompare(b.date));
     const emps = [...new Set(masterData.map(e => e.name))], branches = [...new Set(masterData.map(e => e.branch))];
     const eS = document.getElementById("empSelect"), bS = document.getElementById("branchSelectDropdown"), bET = document.getElementById("bulkEmpTarget");
@@ -705,18 +908,19 @@ window.renderAll = function () {
         if (e.name !== curE) {
             curE = e.name; let ent = display.filter(x => x.name === e.name);
             let h = ent.reduce((s, c) => s + c.total, 0), p = ent.reduce((s, c) => s + parseFloat(c.pay), 0);
-            const brText = appSettings.showBranch ? ` (${e.branch}) ` : ' ';
-            dailyBody.innerHTML += `<tr class="emp-separator-bar"><td colspan="${hasS3 ? 9 : 8}">${e.name}${brText}| Cumulative: ${decToT(h)} | Pay: ${getCurrencySymbol()}${p.toFixed(2)}</td></tr>`;
+            const brText = appSettings.showBranch ? ` <span style="font-weight:normal; font-size:12px; color:#555;">(${e.branch})</span> ` : '';
+            let totalCols = 7 + (appSettings.showBranch ? 1 : 0) + (hasS3 ? 1 : 0) + (hasS4 ? 1 : 0) + (hasS5 ? 1 : 0);
+            dailyBody.innerHTML += `<tr class="emp-separator-bar"><td colspan="${totalCols}" style="text-align: center; font-weight: bold; background: #eaeff5; padding: 10px; font-size: 14px; border-bottom: 2px solid #d5ddec;">${e.name}${brText} &nbsp;&nbsp;|&nbsp;&nbsp; Cumulative: ${formatHoursText(h)} &nbsp;&nbsp;|&nbsp;&nbsp; Pay: ${getCurrencySymbol()}${p.toFixed(2)}</td></tr>`;
         }
         const d = e.date.split('-').slice(1).concat(e.date.split('-')[0]).join('-');
         const brCell = appSettings.showBranch ? `<td>${e.branch}</td>` : '<td style="display:none"></td>';
-        dailyBody.innerHTML += `<tr ${selectedId === e.id ? 'class="selected"' : ''} onclick="selectRow(${e.id}, event)"><td>${d}</td>${brCell}<td>${e.s1s}-${e.s1e}</td><td>${e.s2s}-${e.s2e}</td><td style="display:${hasS3 ? '' : 'none'}">${e.s3s ? e.s3s + '-' + e.s3e : '-'}</td><td>${decToT(e.total)}</td><td>${getCurrencySymbol()}${e.rate}</td><td>${getCurrencySymbol()}${e.pay}</td><td><button class="btn-edit-small" onclick="event.stopPropagation(); editEntry(${e.id})">Edit</button><button class="btn-danger-x" onclick="event.stopPropagation(); deleteEntry(${e.id})">×</button></td></tr>`;
+        dailyBody.innerHTML += `<tr ${selectedId === e.id ? 'class="selected"' : ''} onclick="selectRow(${e.id}, event)"><td>${d}</td>${brCell}<td>${e.s1s}-${e.s1e}</td><td>${e.s2s}-${e.s2e}</td><td style="display:${hasS3 ? '' : 'none'}">${e.s3s ? e.s3s + '-' + e.s3e : '-'}</td><td style="display:${hasS4 ? '' : 'none'}">${e.s4s ? e.s4s + '-' + e.s4e : '-'}</td><td style="display:${hasS5 ? '' : 'none'}">${e.s5s ? e.s5s + '-' + e.s5e : '-'}</td><td>${decToT(e.total)}</td><td>${getCurrencySymbol()}${e.rate}</td><td>${getCurrencySymbol()}${e.pay}</td><td><button class="btn-edit-small" onclick="event.stopPropagation(); editEntry(${e.id})">Edit</button><button class="btn-danger-x" onclick="event.stopPropagation(); deleteEntry(${e.id})">×</button></td></tr>`;
     });
     const filteredEmps = [...new Set(display.map(e => e.name))];
     filteredEmps.forEach(n => {
         let ent = display.filter(x => x.name === n); let h = ent.reduce((s, c) => s + c.total, 0), p = ent.reduce((s, c) => s + parseFloat(c.pay), 0);
         if (ent.length > 0) {
-            summaryBody.innerHTML += `<tr style="background:#e8f5e9; font-weight:bold;"><td style="text-align:left; padding-left:15px;">${n}</td><td style="text-align:left; padding-left:15px;">${ent[0].branch}</td><td>${decToT(h)}</td><td>${getCurrencySymbol()}${p.toFixed(2)}</td><td><button class="btn-primary" style="padding: 4px 8px; font-size: 11px; background:#17a2b8;" onclick="generatePayStub('${n}')">📄 PDF</button></td><td><button class="btn-danger-x" onclick="deleteEmployeeBulk('${n}')">Clear All</button></td></tr>`;
+            summaryBody.innerHTML += `<tr style="background:#e8f5e9; font-weight:bold;"><td style="text-align:left; padding-left:15px;">${n}</td><td style="text-align:left; padding-left:15px;">${ent[0].branch}</td><td>${formatHoursText(h)}</td><td>${getCurrencySymbol()}${p.toFixed(2)}</td><td><button class="btn-primary" style="padding: 4px 8px; font-size: 11px; background:#17a2b8;" onclick="generatePayStub('${n}')">📄 PDF</button></td><td><button class="btn-danger-x" onclick="deleteEmployeeBulk('${n}')">Clear All</button></td></tr>`;
         }
     });
 
@@ -728,7 +932,7 @@ window.renderAll = function () {
             let ent = display.filter(x => x.branch === b);
             if (ent.length > 0) {
                 let h = ent.reduce((s, c) => s + c.total, 0), p = ent.reduce((s, c) => s + parseFloat(c.pay), 0);
-                branchSummaryBody.innerHTML += `<tr><td>${b}</td><td>${decToT(h)}</td><td>${getCurrencySymbol()}${p.toFixed(2)}</td><td><button class="btn-danger-x" onclick="clearBranchSecure('${b}')">Clear All</button></td></tr>`;
+                branchSummaryBody.innerHTML += `<tr><td>${b}</td><td>${formatHoursText(h)}</td><td>${getCurrencySymbol()}${p.toFixed(2)}</td><td><button class="btn-danger-x" onclick="clearBranchSecure('${b}')">Clear All</button></td></tr>`;
             }
         });
     }
@@ -901,21 +1105,22 @@ window.executeBulkUpdate = function () {
 };
 
 function decToT(d) { const h = Math.floor(d), m = Math.round((d - h) * 60); return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`; }
+function formatHoursText(d) { let h = Math.floor(d), m = Math.round((d - h) * 60); if (m === 60) { h += 1; m = 0; } if (m === 0) return `${h} hours`; if (h === 0) return `${m} minutes`; return `${h} hours and ${m} minutes`; }
 function calcH(s, e) { if (!s || !e || s.length < 5 || e.length < 5) return 0; let [h1, m1] = s.split(':').map(Number), [h2, m2] = e.split(':').map(Number), st = h1 + (m1 / 60), en = h2 + (m2 / 60); if (en < st) en += 24; return en - st; }
 
 window.toggleClockFormat = function () {
     const f = document.getElementById("clockToggle").value;
     let vals = {};
-    for (let i = 1; i <= 3; i++) {
+    for (let i = 1; i <= 5; i++) {
         vals[`s${i}start`] = document.getElementById(`s${i}start`)?.value || "";
         vals[`s${i}end`] = document.getElementById(`s${i}end`)?.value || "";
     }
-    for (let i = 1; i <= 3; i++) {
+    for (let i = 1; i <= 5; i++) {
         const r = document.getElementById(`s${i}_row`);
         r.innerHTML = f === "24" ? `<input type="text" id="s${i}start" class="time-input-24" placeholder="00:00" maxlength="5"> <span>to</span> <input type="text" id="s${i}end" class="time-input-24" placeholder="00:00" maxlength="5">` : `<input type="time" id="s${i}start"> <span>to</span> <input type="time" id="s${i}end">`;
     }
     if (f === "24") setupMasks();
-    for (let i = 1; i <= 3; i++) {
+    for (let i = 1; i <= 5; i++) {
         if (document.getElementById(`s${i}start`)) document.getElementById(`s${i}start`).value = vals[`s${i}start`];
         if (document.getElementById(`s${i}end`)) document.getElementById(`s${i}end`).value = vals[`s${i}end`];
     }
@@ -923,7 +1128,7 @@ window.toggleClockFormat = function () {
 
 function setupMasks() { document.querySelectorAll('.time-input-24').forEach(i => { i.addEventListener('input', (e) => { let v = e.target.value.replace(/\D/g, ''); if (v.length >= 3) e.target.value = v.slice(0, 2) + ":" + v.slice(2, 4); else e.target.value = v; }); }); }
 
-window.resetShifts = function () { ["s1start", "s1end", "s2start", "s2end", "s3start", "s3end"].forEach(id => { if (document.getElementById(id)) document.getElementById(id).value = ""; }); editingId = null; document.getElementById("workDate").value = ""; document.getElementById("mainBtn").innerText = "Save / Update Log"; window.isDuplicating = false; };
+window.resetShifts = function () { ["s1start", "s1end", "s2start", "s2end", "s3start", "s3end", "s4start", "s4end", "s5start", "s5end"].forEach(id => { if (document.getElementById(id)) document.getElementById(id).value = ""; }); editingId = null; document.getElementById("workDate").value = ""; document.getElementById("mainBtn").innerText = "Save / Update Log"; window.isDuplicating = false; };
 window.updateNameFromDropdown = function () {
     const s = document.getElementById("empSelect");
     if (s.value !== "") {
@@ -977,7 +1182,8 @@ window.clearAllTablesSecure = function () {
 };
 
 window.exportToExcel = function () {
-    let csv = "Date,Employee,Branch,Shift 1,Shift 2,Shift 3,Total Hours,Hourly Rate,Total Pay\n";
+    const showExt = appSettings.showExtendedShifts;
+    let csv = showExt ? "Date,Employee,Branch,Shift 1,Shift 2,Shift 3,Shift 4,Shift 5,Total Hours,Hourly Rate,Total Pay\n" : "Date,Employee,Branch,Shift 1,Shift 2,Shift 3,Total Hours,Hourly Rate,Total Pay\n";
     const curFilter = document.getElementById("viewFilter").value;
     const curBranchFilter = document.getElementById("branchFilter").value;
 
@@ -993,7 +1199,11 @@ window.exportToExcel = function () {
     });
 
     curData.forEach(d => {
-        csv += `"${d.date}","${d.name}","${d.branch}","${d.s1s}-${d.s1e}","${d.s2s}-${d.s2e}","${d.s3s}-${d.s3e}",${decToT(d.total)},${d.rate},${d.pay}\n`;
+        if (showExt) {
+            csv += `"${d.date}","${d.name}","${d.branch}","${d.s1s}-${d.s1e}","${d.s2s}-${d.s2e}","${d.s3s}-${d.s3e}","${d.s4s || ''}-${d.s4e || ''}","${d.s5s || ''}-${d.s5e || ''}",${decToT(d.total)},${d.rate},${d.pay}\n`;
+        } else {
+            csv += `"${d.date}","${d.name}","${d.branch}","${d.s1s}-${d.s1e}","${d.s2s}-${d.s2e}","${d.s3s}-${d.s3e}",${decToT(d.total)},${d.rate},${d.pay}\n`;
+        }
     });
 
     csv += "\nSummary Data\n";
@@ -1077,7 +1287,7 @@ window.exportToPDF = function () {
         d.date,
         d.name,
         d.branch,
-        `${d.s1s}-${d.s1e}${d.s2s ? '\n' + d.s2s + '-' + d.s2e : ''}${d.s3s ? '\n' + d.s3s + '-' + d.s3e : ''}`,
+        `${d.s1s}-${d.s1e}${d.s2s ? '\n' + d.s2s + '-' + d.s2e : ''}${d.s3s ? '\n' + d.s3s + '-' + d.s3e : ''}${d.s4s && appSettings.showExtendedShifts ? '\n' + d.s4s + '-' + d.s4e : ''}${d.s5s && appSettings.showExtendedShifts ? '\n' + d.s5s + '-' + d.s5e : ''}`,
         decToT(d.total),
         `${getCurrencySymbol()}${d.rate}`,
         `${getCurrencySymbol()}${d.pay}`
@@ -1400,7 +1610,7 @@ window.generatePayStub = function (employeeName) {
     const tableHeaders = [["Date", "Shifts", "Daily Hrs", "Rate", "Daily Pay"]];
     const tableRows = ent.map(d => [
         d.date,
-        `${d.s1s}-${d.s1e}${d.s2s ? ', ' + d.s2s + '-' + d.s2e : ''}${d.s3s ? ', ' + d.s3s + '-' + d.s3e : ''}`,
+        `${d.s1s}-${d.s1e}${d.s2s ? ', ' + d.s2s + '-' + d.s2e : ''}${d.s3s ? ', ' + d.s3s + '-' + d.s3e : ''}${d.s4s && appSettings.showExtendedShifts ? ', ' + d.s4s + '-' + d.s4e : ''}${d.s5s && appSettings.showExtendedShifts ? ', ' + d.s5s + '-' + d.s5e : ''}`,
         decToT(d.total),
         `${getCurrencySymbol()}${d.rate}`,
         `${getCurrencySymbol()}${d.pay}`

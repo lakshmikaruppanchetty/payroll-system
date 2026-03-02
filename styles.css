@@ -405,7 +405,8 @@
 
         .tooltip-icon .tooltip-text {
             visibility: hidden;
-            width: 220px;
+            width: max-content;
+            max-width: 250px;
             background-color: #343a40;
             color: #fff;
             text-align: left;
@@ -415,7 +416,7 @@
             z-index: 1000;
             bottom: 150%;
             left: 50%;
-            margin-left: -110px;
+            transform: translateX(-50%);
             opacity: 0;
             transition: opacity 0.3s;
             font-size: 11px;
@@ -436,6 +437,17 @@
             border-width: 5px;
             border-style: solid;
             border-color: #343a40 transparent transparent transparent;
+        }
+
+        .tooltip-icon.tooltip-bottom .tooltip-text {
+            bottom: auto;
+            top: 150%;
+        }
+
+        .tooltip-icon.tooltip-bottom .tooltip-text::after {
+            top: auto;
+            bottom: 100%;
+            border-color: transparent transparent #343a40 transparent;
         }
 
         .tooltip-icon:hover .tooltip-text {

@@ -65,7 +65,8 @@ class TestPayrollManagement(unittest.TestCase):
             ("toggleBranchSummary", "branchSummarySection"),
             ("togglePdf", "pdfCard"),
             ("toggleCsv", "csvCard"),
-            ("toggleExportPdf", "btnExportPdf")
+            ("toggleExportPdf", "btnExportPdf"),
+            ("toggleExtendedShifts", "s4_container")
         ]
         
         for toggle_id, target_id in features:

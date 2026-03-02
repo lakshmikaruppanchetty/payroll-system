@@ -525,7 +525,7 @@ window.addEntry = function () {
                 dup.total = calcH(dup.s1s, dup.s1e) + calcH(dup.s2s, dup.s2e) + calcH(dup.s3s, dup.s3e) + (appSettings.showExtendedShifts ? calcH(dup.s4s, dup.s4e) + calcH(dup.s5s, dup.s5e) : 0);
                 dup.pay = (dup.total * dup.rate).toFixed(2);
                 localStorage.setItem("payroll_v20", JSON.stringify(masterData));
-                resetShifts(); renderAll(); return;
+                resetShifts(); renderAll(); if (typeof checkPendingAI === 'function') checkPendingAI(); return;
             }
         } else {
             if (confirm(`Existing record on ${date}. Edit?`)) editEntry(dup.id); return;
@@ -570,7 +570,7 @@ window.addEntry = function () {
         document.getElementById("customDateInputs").style.display = "flex";
     }
 
-    editingId = null; resetShifts(); renderAll();
+    editingId = null; resetShifts(); renderAll(); if (typeof checkPendingAI === 'function') checkPendingAI();
 };
 
 window.importCSV = function () {
@@ -628,7 +628,8 @@ window.importCSV = function () {
             let askMerge = null;
 
             for (let i = 1; i < rows.length; i++) {
-                if (rows[i].includes("Summary Data") || rows[i].includes("Employee,Branch,")) continue;
+                if (rows[i].includes("Summary Data")) break;
+                if (rows[i].includes("Employee,Branch,")) continue;
 
                 const cols = [];
                 let inQuotes = false, current = "";
@@ -715,36 +716,42 @@ window.importCSV = function () {
                         name = mapIdx.name > -1 ? clean(cols[mapIdx.name]) : clean(cols[1]);
                         branch = mapIdx.branch > -1 ? clean(cols[mapIdx.branch]) : (clean(cols[2]) || "Branch A");
 
-                        let rawShifts = [];
-                        let potentialRates = [];
-
-                        for (let k = 3; k < cols.length; k++) {
-                            let cell = clean(cols[k]);
-                            if (!cell) continue;
-
-                            let hasTimeMatch = cell.match(/[0-9]{1,2}[:.]?[0-9]{0,2}\s*(am|pm|AM|PM)?\s*(to|-)\s*[0-9]{1,2}[:.]?[0-9]{0,2}\s*(am|pm|AM|PM)?/);
-                            if (hasTimeMatch) {
-                                let multi = extractMultipleShifts(cell);
-                                rawShifts.push(...multi);
-                            } else {
-                                let numClean = cell.replace(/[$£€\s]/g, '');
-                                if (/^[0-9]+(\.[0-9]+)?$/.test(numClean)) {
-                                    potentialRates.push(numClean);
-                                } else if (/[0-9]{1,2}:[0-9]{2}/.test(cell) || /[0-9]{1,2}\s*(am|pm|AM|PM)/.test(cell)) {
-                                    rawShifts.push(extractShift(cell));
+                        let combinedStr = mapIdx.s1 > -1 ? clean(cols[mapIdx.s1]) : clean(cols[3]);
+                        let multi = extractMultipleShifts(combinedStr);
+                        if (multi.length > 1) {
+                            s1 = multi[0] || ["", ""];
+                            s2 = multi[1] || ["", ""];
+                            s3 = multi[2] || ["", ""];
+                            s4 = multi[3] || ["", ""];
+                            s5 = multi[4] || ["", ""];
+                        } else {
+                            let checkAndPush = (idx) => {
+                                if (idx === -1) return ["", ""];
+                                let c = idx < cols.length ? clean(cols[idx]) : "";
+                                if (/^[0-9]+(\.[0-9]+)?$/.test(c.replace(/[$£€\s]/g, '')) && !c.includes(':')) {
+                                    return ["", ""];
                                 }
-                            }
-                        }
+                                return c ? extractShift(c) : ["", ""];
+                            };
 
-                        s1 = rawShifts[0] || ["", ""];
-                        s2 = rawShifts[1] || ["", ""];
-                        s3 = rawShifts[2] || ["", ""];
-                        s4 = rawShifts[3] || ["", ""];
-                        s5 = rawShifts[4] || ["", ""];
+                            s1 = mapIdx.s1 > -1 ? checkAndPush(mapIdx.s1) : (cols[3] ? extractShift(clean(cols[3])) : ["", ""]);
+                            s2 = checkAndPush(mapIdx.s2);
+                            s3 = checkAndPush(mapIdx.s3);
+                            s4 = checkAndPush(mapIdx.s4);
+                            s5 = checkAndPush(mapIdx.s5);
+                        }
 
                         let rStr = "";
                         if (mapIdx.rate > -1 && mapIdx.rate < cols.length) rStr = clean(cols[mapIdx.rate]);
                         if (!rStr || isNaN(parseFloat(rStr.replace(/[^0-9.]/g, '')))) {
+                            let potentialRates = [];
+                            for (let k = 3; k < cols.length; k++) {
+                                let cell = clean(cols[k]);
+                                let numClean = cell.replace(/[$£€\s]/g, '');
+                                if (/^[0-9]+(\.[0-9]+)?$/.test(numClean)) {
+                                    potentialRates.push(numClean);
+                                }
+                            }
                             if (potentialRates.length >= 3) rStr = potentialRates[potentialRates.length - 2];
                             else if (potentialRates.length === 2) rStr = potentialRates[0];
                             else if (potentialRates.length === 1) rStr = potentialRates[0];
@@ -854,9 +861,6 @@ window.renderAll = function () {
     const dailyBody = document.getElementById("dailyTableBody"); const summaryBody = document.querySelector("#summaryTable tbody");
     const vEmp = document.getElementById("viewFilter").value; const vBranch = document.getElementById("branchFilter").value;
     dailyBody.innerHTML = ""; summaryBody.innerHTML = "";
-    let hasS3 = masterData.some(e => e.s3s && e.s3s.length >= 4); document.getElementById("shift3Header").style.display = hasS3 ? "" : "none";
-    let hasS4 = masterData.some(e => e.s4s && e.s4s.length >= 4); document.getElementById("shift4Header").style.display = hasS4 ? "" : "none";
-    let hasS5 = masterData.some(e => e.s5s && e.s5s.length >= 4); document.getElementById("shift5Header").style.display = hasS5 ? "" : "none";
     masterData.sort((a, b) => a.name.localeCompare(b.name) || a.date.localeCompare(b.date));
     const emps = [...new Set(masterData.map(e => e.name))], branches = [...new Set(masterData.map(e => e.branch))];
     const eS = document.getElementById("empSelect"), bS = document.getElementById("branchSelectDropdown"), bET = document.getElementById("bulkEmpTarget");
@@ -903,6 +907,11 @@ window.renderAll = function () {
         }
         return matchEmp && matchBranch && matchDate;
     });
+
+    let hasS3 = display.some(e => e.s3s && e.s3s.length >= 4); document.getElementById("shift3Header").style.display = hasS3 ? "" : "none";
+    let hasS4 = display.some(e => e.s4s && e.s4s.length >= 4); document.getElementById("shift4Header").style.display = hasS4 ? "" : "none";
+    let hasS5 = display.some(e => e.s5s && e.s5s.length >= 4); document.getElementById("shift5Header").style.display = hasS5 ? "" : "none";
+
     let curE = "";
     display.forEach(e => {
         if (e.name !== curE) {
@@ -1082,16 +1091,21 @@ window.checkExistingShifts = function () {
     const e = masterData.find(x => x.name === name && x.date === date);
     if (e) {
         if (editingId && editingId === e.id) return;
+        if (document.getElementById("s1start").value !== "" && !editingId && !window.isDuplicating) {
+            if (!confirm(`An existing record for ${name} on ${date} was found. Would you like to load and overwrite your current form data?`)) return;
+        }
         document.getElementById("s1start").value = e.s1s; document.getElementById("s1end").value = e.s1e; document.getElementById("s2start").value = e.s2s; document.getElementById("s2end").value = e.s2e; document.getElementById("s3start").value = e.s3s; document.getElementById("s3end").value = e.s3e;
         document.getElementById("hourlyRate").value = e.rate; document.getElementById("branchName").value = e.branch;
         editingId = e.id; document.getElementById("mainBtn").innerText = "Update Log";
         window.isDuplicating = false;
     } else {
-        if (!window.isDuplicating) {
-            ["s1start", "s1end", "s2start", "s2end", "s3start", "s3end"].forEach(id => { if (document.getElementById(id)) document.getElementById(id).value = ""; });
+        if (editingId !== null) {
+            if (!window.isDuplicating) {
+                ["s1start", "s1end", "s2start", "s2end", "s3start", "s3end", "s4start", "s4end", "s5start", "s5end"].forEach(id => { if (document.getElementById(id)) document.getElementById(id).value = ""; });
+            }
+            editingId = null;
+            document.getElementById("mainBtn").innerText = "Save / Update Log";
         }
-        editingId = null;
-        document.getElementById("mainBtn").innerText = "Save / Update Log";
     }
 };
 
@@ -1428,7 +1442,7 @@ function parseTimesAndDate(text) {
     return { times, dateStr };
 }
 
-function applyAutofill(matches, dateStr) {
+function applyAutofill(matches, dateStr, remainingRows = 0) {
     let f = document.getElementById("clockToggle").value;
     if (f !== "24") { document.getElementById("clockToggle").value = "24"; window.toggleClockFormat(); }
 
@@ -1440,7 +1454,20 @@ function applyAutofill(matches, dateStr) {
         if (matches[i]) document.getElementById(id).value = matches[i].padStart(5, '0');
     });
 
-    alert("⚠️ AI Auto-Fill Complete!\n\nWe successfully detected data from the document.\n\nPlease CAREFULLY verify that the populated values are perfectly accurate before saving!");
+    if (remainingRows > 0) {
+        alert(`🤖 AI Extracted ${remainingRows + 1} shifts total!\n\nWe populated the FIRST day (${dateStr}).\nReview the data carefully, then click 'Save / Update Log'. The next timesheet row will auto-load immediately!`);
+    } else {
+        let msg = "⚠️ AI Auto-Fill Complete!\n\nWe successfully detected data from the document.\nPlease CAREFULLY verify the values are accurate before saving!";
+        if (window.pendingAIRows && window.pendingAIRows.length > 0) msg = `🤖 Loading next AI timesheet row: ${dateStr || 'Unknown Date'}...\nReview before saving!`;
+        alert(msg);
+    }
+}
+
+function checkPendingAI() {
+    if (window.pendingAIRows && window.pendingAIRows.length > 0) {
+        let nextRow = window.pendingAIRows.shift();
+        applyAutofill(nextRow.times || [], nextRow.date || null, window.pendingAIRows.length);
+    }
 }
 
 async function runOCR(canvas) {
@@ -1510,13 +1537,13 @@ async function callGemini(canvas) {
 
     const base64Image = canvas.toDataURL('image/jpeg').split(',')[1];
     try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${appSettings.geminiApiKey}`, {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${appSettings.geminiApiKey}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 contents: [{
                     parts: [
-                        { text: "Read this handwritten timesheet. Extract the shift date and chronological start and end times for up to 3 shifts. Return ONLY a JSON object with two keys: 'date' (YYYY-MM-DD format, or null) and 'times' (Array of 6 strings representing start/end times in 24-hour 'HH:MM' format. Example: [\"09:00\", \"13:00\", \"14:00\", \"18:00\", \"\", \"\"]). Output nothing else, no markdown formatting." },
+                        { text: "Read this handwritten timesheet. Extract the shift dates and chronological start/end times for EACH daily row present. Skip days that do not have any shifts recorded (0 hours/blank). Return ONLY a JSON array of objects, where each object represents one day's row, and contains two keys: 'date' (YYYY-MM-DD format, or null) and 'times' (Array of exactly 6 strings representing sequential start/end times in 24-hour 'HH:MM' format. Example object: {\"date\": \"2023-10-14\", \"times\": [\"09:00\", \"13:00\", \"14:00\", \"18:00\", \"\", \"\"]}). Output nothing else, no comments, no markdown formatting." },
                         { inline_data: { mime_type: "image/jpeg", data: base64Image } }
                     ]
                 }]
@@ -1530,11 +1557,14 @@ async function callGemini(canvas) {
 
         let content = data.candidates[0].content.parts[0].text.trim().replace(/```json/g, '').replace(/```/g, '').trim();
         let parsed = JSON.parse(content);
-        let timesArray = parsed.times || [];
-        let dateStr = parsed.date || null;
-        let validMatches = timesArray.filter(t => t && t.length >= 4);
+        if (!Array.isArray(parsed)) parsed = [parsed];
 
-        if (validMatches.length >= 2 || dateStr) applyAutofill(timesArray, dateStr);
+        let validRows = parsed.filter(row => row.times && row.times.filter(t => t && t.length >= 4).length >= 2);
+
+        if (validRows.length > 0) {
+            window.pendingAIRows = validRows.slice(1);
+            applyAutofill(validRows[0].times || [], validRows[0].date || null, window.pendingAIRows.length);
+        }
         else alert("Gemini could not confidently detect clear shift timings. Please enter manually.");
 
     } catch (e) {

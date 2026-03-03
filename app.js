@@ -929,9 +929,21 @@ window.renderAll = function () {
             let totalCols = 7 + (appSettings.showBranch ? 1 : 0) + (hasS3 ? 1 : 0) + (hasS4 ? 1 : 0) + (hasS5 ? 1 : 0);
             dailyBody.innerHTML += `<tr class="emp-separator-bar"><td colspan="${totalCols}" style="text-align: center; font-weight: bold; background: #eaeff5; padding: 10px; font-size: 14px; border-bottom: 2px solid #d5ddec;">${e.name}${brText} &nbsp;&nbsp;|&nbsp;&nbsp; Cumulative: ${formatHoursText(h)} &nbsp;&nbsp;|&nbsp;&nbsp; Pay: ${getCurrencySymbol()}${p.toFixed(2)}</td></tr>`;
         }
+        let cf = document.getElementById("clockToggle") ? document.getElementById("clockToggle").value : "24";
+        let ft = (t) => {
+            if (!t) return "";
+            if (cf === "24") return t;
+            let [h, m] = t.split(":");
+            h = parseInt(h, 10);
+            let ampm = h >= 12 ? 'PM' : 'AM';
+            h = h % 12 || 12;
+            return `${h.toString().padStart(2, '0')}:${m} ${ampm}`;
+        };
+        let sHT = (s, eval_) => s ? `${ft(s)} - ${ft(eval_)}` : '-';
+
         const d = e.date.split('-').slice(1).concat(e.date.split('-')[0]).join('-');
         const brCell = appSettings.showBranch ? `<td>${e.branch}</td>` : '<td style="display:none"></td>';
-        dailyBody.innerHTML += `<tr ${selectedId === e.id ? 'class="selected"' : ''} onclick="selectRow(${e.id}, event)"><td>${d}</td>${brCell}<td>${e.s1s}-${e.s1e}</td><td>${e.s2s}-${e.s2e}</td><td style="display:${hasS3 ? '' : 'none'}">${e.s3s ? e.s3s + '-' + e.s3e : '-'}</td><td style="display:${hasS4 ? '' : 'none'}">${e.s4s ? e.s4s + '-' + e.s4e : '-'}</td><td style="display:${hasS5 ? '' : 'none'}">${e.s5s ? e.s5s + '-' + e.s5e : '-'}</td><td>${decToT(e.total)}</td><td>${getCurrencySymbol()}${e.rate}</td><td>${getCurrencySymbol()}${e.pay}</td><td><button class="btn-edit-small" onclick="event.stopPropagation(); editEntry(${e.id})">Edit</button><button class="btn-danger-x" onclick="event.stopPropagation(); deleteEntry(${e.id})">×</button></td></tr>`;
+        dailyBody.innerHTML += `<tr ${selectedId === e.id ? 'class="selected"' : ''} onclick="selectRow(${e.id}, event)"><td>${d}</td>${brCell}<td>${sHT(e.s1s, e.s1e)}</td><td>${sHT(e.s2s, e.s2e)}</td><td style="display:${hasS3 ? '' : 'none'}">${sHT(e.s3s, e.s3e)}</td><td style="display:${hasS4 ? '' : 'none'}">${sHT(e.s4s, e.s4e)}</td><td style="display:${hasS5 ? '' : 'none'}">${sHT(e.s5s, e.s5e)}</td><td>${decToT(e.total)}</td><td>${getCurrencySymbol()}${e.rate}</td><td>${getCurrencySymbol()}${e.pay}</td><td><button class="btn-edit-small" onclick="event.stopPropagation(); editEntry(${e.id})">Edit</button><button class="btn-danger-x" onclick="event.stopPropagation(); deleteEntry(${e.id})">×</button></td></tr>`;
     });
     const filteredEmps = [...new Set(display.map(e => e.name))];
     filteredEmps.forEach(n => {
@@ -1127,8 +1139,17 @@ function decToT(d) { const h = Math.floor(d), m = Math.round((d - h) * 60); retu
 function formatHoursText(d) { let h = Math.floor(d), m = Math.round((d - h) * 60); if (m === 60) { h += 1; m = 0; } if (m === 0) return `${h} hours`; if (h === 0) return `${m} minutes`; return `${h} hours and ${m} minutes`; }
 function calcH(s, e) { if (!s || !e || s.length < 5 || e.length < 5) return 0; let [h1, m1] = s.split(':').map(Number), [h2, m2] = e.split(':').map(Number), st = h1 + (m1 / 60), en = h2 + (m2 / 60); if (en < st) en += 24; return en - st; }
 
-window.toggleClockFormat = function () {
-    const f = document.getElementById("clockToggle").value;
+window.toggleClockFormat = function (source) {
+    if (source === 'top') {
+        if (document.getElementById("clockToggle") && document.getElementById("clockToggleTop")) {
+            document.getElementById("clockToggle").value = document.getElementById("clockToggleTop").value;
+        }
+    } else {
+        if (document.getElementById("clockToggle") && document.getElementById("clockToggleTop")) {
+            document.getElementById("clockToggleTop").value = document.getElementById("clockToggle").value;
+        }
+    }
+    const f = document.getElementById("clockToggle") ? document.getElementById("clockToggle").value : "24";
     let vals = {};
     for (let i = 1; i <= 5; i++) {
         vals[`s${i}start`] = document.getElementById(`s${i}start`)?.value || "";
@@ -1143,6 +1164,7 @@ window.toggleClockFormat = function () {
         if (document.getElementById(`s${i}start`)) document.getElementById(`s${i}start`).value = vals[`s${i}start`];
         if (document.getElementById(`s${i}end`)) document.getElementById(`s${i}end`).value = vals[`s${i}end`];
     }
+    renderAll();
 };
 
 function setupMasks() { document.querySelectorAll('.time-input-24').forEach(i => { i.addEventListener('input', (e) => { let v = e.target.value.replace(/\D/g, ''); if (v.length >= 3) e.target.value = v.slice(0, 2) + ":" + v.slice(2, 4); else e.target.value = v; }); }); }
@@ -1459,8 +1481,12 @@ function parseTimesAndDate(text) {
 }
 
 function applyAutofill(matches, dateStr, remainingRows = 0) {
-    let f = document.getElementById("clockToggle").value;
-    if (f !== "24") { document.getElementById("clockToggle").value = "24"; window.toggleClockFormat(); }
+    let f = document.getElementById("clockToggle") ? document.getElementById("clockToggle").value : "24";
+    if (f !== "24") {
+        if (document.getElementById("clockToggle")) document.getElementById("clockToggle").value = "24";
+        if (document.getElementById("clockToggleTop")) document.getElementById("clockToggleTop").value = "24";
+        window.toggleClockFormat();
+    }
 
     if (dateStr) {
         document.getElementById("workDate").value = dateStr;

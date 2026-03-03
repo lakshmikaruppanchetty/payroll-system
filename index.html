@@ -111,7 +111,8 @@
                             <label style="margin:0;">Clock UI:<span class="tooltip-icon"
                                     style="margin-right: 10px;">i<span class="tooltip-text">Toggle between standard
                                         12-hour AM/PM selection or a 24-hour native system clock.</span></span></label>
-                            <select id="clockToggle" onchange="toggleClockFormat()" style="width: auto; padding: 4px;">
+                            <select id="clockToggleTop" onchange="toggleClockFormat('top')"
+                                style="width: auto; padding: 4px;">
                                 <option value="24">24-Hour (HH:mm)</option>
                                 <option value="12">12-Hour (AM/PM)</option>
                             </select>
@@ -178,7 +179,12 @@
                             <option value="today">Today</option>
                             <option value="current_month">Current Month</option>
                             <option value="last_month">Last Month</option>
-                            <option value="custom">Custom Date</option>
+                        </select>
+                        <label style="margin-left: 5px;">Clock Format:</label>
+                        <select id="clockToggle" onchange="toggleClockFormat('bottom')"
+                            style="width: auto; padding: 6px;">
+                            <option value="24">24-Hour</option>
+                            <option value="12">12-Hour</option>
                         </select>
                         <div id="customDateInputs" style="display: none; align-items: center;">
                             <label>Start Date:</label>
@@ -484,7 +490,7 @@
                         representing Gross Pay and Total Hours, completely auto-calculated with active data boundaries.
                     </li>
                 </ul>
-                <p style="text-align: center; margin-top: 35px; color: #aaa; font-size: 11px;">Version 20.10 • Built
+                <p style="text-align: center; margin-top: 35px; color: #aaa; font-size: 11px;">Version 20.11 • Built
                     with
                     HTML5 + Frontend Javascript</p>
             </div>
@@ -493,7 +499,7 @@
 
     <div style="position: fixed; bottom: 10px; left: 15px; text-align: left; font-size: 14px; font-weight: bold; color: #888; pointer-events: none; z-index: 9999;"
         id="globalFooter">
-        v20.10
+        v20.11
     </div>
 
     <!-- Guided Tour HTML -->

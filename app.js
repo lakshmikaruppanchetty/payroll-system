@@ -871,9 +871,15 @@ window.renderAll = function () {
     bET.innerHTML = emps.length > 1 ? '<option value="ALL">ALL Employees</option><option value="SELECTED">Selected Only</option>' : '<option value="SELECTED">Selected Only</option>';
     if (cBET && Array.from(bET.options).some(o => o.value === cBET)) bET.value = cBET;
 
-    emps.forEach(n => { eS.innerHTML += `<option value="${n}">${n}</option>`; document.getElementById("viewFilter").innerHTML += `<option value="${n}">${n}</option>`; });
+    const filterEmps = [...new Set(masterData.filter(e => !vBranch || vBranch === "ALL" || e.branch === vBranch).map(e => e.name))];
+    const filterBranches = [...new Set(masterData.filter(e => !vEmp || vEmp === "ALL" || e.name === vEmp).map(e => e.branch))];
+
+    emps.forEach(n => { eS.innerHTML += `<option value="${n}">${n}</option>`; });
+    filterEmps.forEach(n => { document.getElementById("viewFilter").innerHTML += `<option value="${n}">${n}</option>`; });
+
     bS.innerHTML = '<option value="">-- Select Branch --</option>'; document.getElementById("branchFilter").innerHTML = '<option value="ALL">All Branches</option>';
-    branches.forEach(b => { bS.innerHTML += `<option value="${b}">${b}</option>`; document.getElementById("branchFilter").innerHTML += `<option value="${b}">${b}</option>`; });
+    branches.forEach(b => { bS.innerHTML += `<option value="${b}">${b}</option>`; });
+    filterBranches.forEach(b => { document.getElementById("branchFilter").innerHTML += `<option value="${b}">${b}</option>`; });
 
     if (emps.length === 1) {
         eS.value = emps[0];
@@ -881,10 +887,12 @@ window.renderAll = function () {
         if (!document.getElementById("empName").value) document.getElementById("empName").value = emps[0];
     } else {
         eS.value = (cE === "ALL" || !cE) ? "" : cE;
-        document.getElementById("viewFilter").value = vEmp;
+        if (filterEmps.includes(vEmp)) document.getElementById("viewFilter").value = vEmp;
+        else document.getElementById("viewFilter").value = "ALL";
     }
     bS.value = (cB === "ALL" || !cB) ? "" : cB;
-    document.getElementById("branchFilter").value = vBranch;
+    if (filterBranches.includes(vBranch)) document.getElementById("branchFilter").value = vBranch;
+    else document.getElementById("branchFilter").value = "ALL";
 
     let fStart = document.getElementById("filterStartDate").value;
     let fEnd = document.getElementById("filterEndDate").value;
@@ -1100,9 +1108,6 @@ window.checkExistingShifts = function () {
         window.isDuplicating = false;
     } else {
         if (editingId !== null) {
-            if (!window.isDuplicating) {
-                ["s1start", "s1end", "s2start", "s2end", "s3start", "s3end", "s4start", "s4end", "s5start", "s5end"].forEach(id => { if (document.getElementById(id)) document.getElementById(id).value = ""; });
-            }
             editingId = null;
             document.getElementById("mainBtn").innerText = "Save / Update Log";
         }
@@ -1147,16 +1152,27 @@ window.updateNameFromDropdown = function () {
     const s = document.getElementById("empSelect");
     if (s.value !== "") {
         document.getElementById("empName").value = s.value;
+        document.getElementById("viewFilter").value = s.value;
         const e = [...masterData].reverse().find(x => x.name === s.value);
         if (e && e.branch) {
             document.getElementById("branchName").value = e.branch;
-            if (document.getElementById("branchSelectDropdown")) document.getElementById("branchSelectDropdown").value = e.branch;
+            if (document.getElementById("branchSelectDropdown")) {
+                document.getElementById("branchSelectDropdown").value = e.branch;
+                document.getElementById("branchFilter").value = e.branch;
+            }
         }
         checkExistingShifts();
         renderAll();
     }
 };
-window.updateBranchFromDropdown = function () { const s = document.getElementById("branchSelectDropdown"); if (s.value !== "") { document.getElementById("branchName").value = s.value; renderAll(); } };
+window.updateBranchFromDropdown = function () {
+    const s = document.getElementById("branchSelectDropdown");
+    if (s.value !== "") {
+        document.getElementById("branchName").value = s.value;
+        document.getElementById("branchFilter").value = s.value;
+        renderAll();
+    }
+};
 window.deleteEntry = function (id) {
     const p = prompt("Security PIN required to delete this entry:");
     if (p === appSettings.securityPin) {

@@ -33,7 +33,24 @@
         <ul class="sidebar-menu">
             <li id="menuPayroll" class="active" onclick="switchTab('payroll')"><i>📁</i> <span>Payroll Management</span>
             </li>
-            <li id="menuReports" onclick="switchTab('reports')"><i>📊</i> <span>Reports & Analytics</span></li>
+            <li id="menuAudit" onclick="switchTab('audit')"><i>💵</i> <span>Cash & Tips Audit</span></li>
+
+            <li onclick="toggleSubMenu('reportsSubMenu', this)">
+                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                    <div><i>📊</i> <span>Reports & Analytics</span></div>
+                    <span class="nav-arrow" style="font-size: 10px; transition: transform 0.2s;">▼</span>
+                </div>
+            </li>
+            <ul id="reportsSubMenu" class="sub-menu"
+                style="display: none; list-style-type: none; padding-left: 20px; margin: 0; background: rgba(0,0,0,0.1);">
+                <li id="menuReports" onclick="switchTab('reports')" style="font-size: 0.9em;">
+                    <i>�</i> <span>Payroll Reports</span>
+                </li>
+                <li id="menuAuditReports" onclick="switchTab('auditReports')" style="font-size: 0.9em;">
+                    <i>📉</i> <span>Cash & Tips Reports</span>
+                </li>
+            </ul>
+
             <li id="menuSettings" onclick="switchTab('settings')"><i>⚙️</i> <span>Settings</span></li>
             <li id="menuAbout" onclick="switchTab('about')"><i>ℹ️</i> <span>About</span></li>
         </ul>
@@ -152,10 +169,12 @@
                                 apply globally to the Activity Log, Employee Summary, and Branch Performance tables
                                 below.</span></span></div>
                     <div class="filter-container" style="flex-wrap: wrap; align-items: center;">
-                        <label>Filter Employee:</label><select id="viewFilter" onchange="updateFilter()"
-                            style="width: 180px;">
-                            <option value="ALL">All Employees</option>
-                        </select>
+                        <div id="employeeFilterContainer" style="display:flex; align-items:center;">
+                            <label>Filter Employee:</label><select id="viewFilter" onchange="updateFilter()"
+                                style="width: 180px;">
+                                <option value="ALL">All Employees</option>
+                            </select>
+                        </div>
                         <label id="branchFilterLabel" style="margin-left:15px;">Filter Branch:</label><select
                             id="branchFilter" onchange="updateFilter()" style="width: 180px;">
                             <option value="ALL">All Branches</option>
@@ -173,12 +192,14 @@
                             style="background: #dc3545; margin: 0 0 0 10px; padding: 6px 12px; font-size: 13px;"
                             onclick="clearAllTablesSecure()">Clear Database</button>
                         <div style="flex-basis: 100%; height: 0; margin: 0;"></div>
-                        <label>Clock Format:</label>
-                        <select id="clockToggle" onchange="toggleClockFormat('bottom')"
-                            style="width: auto; padding: 6px; margin-right: 25px;">
-                            <option value="24">24-Hour</option>
-                            <option value="12">12-Hour</option>
-                        </select>
+                        <div id="clockToggleContainer" style="display:flex; align-items:center;">
+                            <label>Clock Format:</label>
+                            <select id="clockToggle" onchange="toggleClockFormat('bottom')"
+                                style="width: auto; padding: 6px; margin-right: 25px; margin-left: 5px;">
+                                <option value="24">24-Hour</option>
+                                <option value="12">12-Hour</option>
+                            </select>
+                        </div>
                         <label>Date Filter:</label>
                         <select id="dateFilterPreset" onchange="applyDatePreset()"
                             style="width: 150px; padding: 6px; margin-right: 15px;">
@@ -206,8 +227,10 @@
             <table id="dailyTable">
                 <thead>
                     <tr>
-                        <th>Date</th>
-                        <th id="hdrBranch">Branch</th>
+                        <th style="cursor: pointer;" onclick="toggleMainSort('date')">Date <span id="mainSortIconDate"
+                                style="color:#ffc107; font-size:14px;">▼</span></th>
+                        <th id="hdrBranch" style="cursor: pointer;" onclick="toggleMainSort('branch')">Branch <span
+                                id="mainSortIconBranch" style="color:#ffffff; font-size:14px;">↕</span></th>
                         <th>Shift 1</th>
                         <th>Shift 2</th>
                         <th id="shift3Header">Shift 3</th>
@@ -222,6 +245,149 @@
                 <tbody id="dailyTableBody"></tbody>
             </table>
 
+        </div>
+
+        <div id="auditView" class="view-section">
+            <h2 style="text-align: center;">Cash & Tips Audit</h2>
+
+            <div class="flex-container" id="botFlexRowAudit" style="margin-bottom: 20px; align-items: stretch;">
+                <div class="card" id="auditSetupCard" style="flex: 1.2;">
+                    <label>1. Branch Setup<span class="tooltip-icon">i<span class="tooltip-text">Select an existing
+                                branch or create a new one to log cash sales to.</span></span></label>
+                    <select id="auditBranchSelectDropdown" onchange="updateAuditBranchFromDropdown()"
+                        style="margin-top:8px; width:100%;">
+                        <option value="">-- Select Branch --</option>
+                    </select>
+                    <input type="text" id="auditBranchName" placeholder="Enter Branch" style="margin-top:8px;"
+                        onchange="checkExistingAudit()">
+                </div>
+                <div class="card bulk-card" id="auditBulkCard" style="flex: 1.2;">
+                    <label>⚡ Global Profile Updates<span class="tooltip-icon">i<span class="tooltip-text">Mass-update
+                                the branch for all previous historical audit records
+                                simultaneously.</span></span></label>
+                    <p style="font-size: 11px; margin-bottom: 8px; color: #856404;">Apply the "Enter Branch" name to
+                        targeted records.</p>
+                    <label>Target Audit Records:</label>
+                    <select id="auditBulkBranchSelect" style="margin-bottom:8px; width:100%;"></select>
+                    <button class="btn-warning" onclick="executeAuditBulkUpdate()" style="width: 100%;">⚡ Update Branch
+                        Name</button>
+                </div>
+                <div class="card" id="auditCsvCard" style="flex: 2;">
+                    <label>Import Audit CSV File<span class="tooltip-icon tooltip-bottom">i<span
+                                class="tooltip-text">Import new Cash & Tips Audit CSV files.<br><br><b>Column
+                                    Order:</b><br>1. Date<br>2. Branch<br>3. Opening Balance<br>4. Closing Balance<br>5.
+                                Cash Out<br>6. Sales Total<br>7. Tips<br>8. Other Expenses<br>9. Closing
+                                Balance</span></span></label>
+                    <input type="file" id="auditCsvImport" accept=".csv" style="padding: 4px; font-size: 11px;">
+                    <button class="btn-import" onclick="importAuditCSV()" style="margin-top:8px;">📂 Import Audit
+                        CSV</button>
+                    <p style="font-size: 10px; color: #666; margin-top: 5px;">Sync previous audit data files into your
+                        current view.</p>
+                </div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h4>Cash Out</h4><span id="st-cashout"><span class="currency-label">$</span>0.00</span>
+                </div>
+                <div class="stat-card">
+                    <h4>Sales Total</h4><span id="st-sales"><span class="currency-label">$</span>0.00</span>
+                </div>
+                <div class="stat-card" style="border-left-color: #27ae60">
+                    <h4>Tips Calculated</h4><span id="st-tips" style="color: #27ae60"><span
+                            class="currency-label">$</span>0.00</span>
+                </div>
+                <div class="stat-card" style="border-left-color: #f1c40f">
+                    <h4>Closing Balance</h4><span id="st-final"><span class="currency-label">$</span>0.00</span>
+                </div>
+            </div>
+
+            <div class="workspace">
+                <div class="card">
+                    <h3 style="margin-top:0">1. Upload & View Receipt</h3>
+                    <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 15px;">
+                        <input type="file" id="uploadAudit" accept="image/*" style="flex: 1; font-size: 12px;">
+                    </div>
+                    <div id="viewer-box-audit">
+                        <p id="hintAudit" style="color:#aaa">Image preview will appear here</p>
+                        <img id="preview-img-audit" style="display:none;">
+                        <canvas id="preprocessed-preview-audit"></canvas>
+                    </div>
+                    <button id="toggle-view-btn-audit" class="toggle-preprocess" onclick="toggleImageViewAudit()">Show
+                        Pre-processed Image</button>
+                    <p id="ocr-status-audit" style="font-size:12px; color:#3498db; font-weight:bold; margin-top:10px;">
+                    </p>
+                </div>
+
+                <div class="card" id="auditVerificationCard">
+                    <div class="toggle-box" style="justify-content: space-between;">
+                        <div style="display: flex; align-items: center;">
+                            <h3 style="margin:0">2. Everyday Cash Sales</h3>
+                        </div>
+                        <button class="btn-reset" onclick="resetAuditForm()" style="margin-left: 10px;">Clear
+                            Form</button>
+                    </div>
+
+                    <div style="display: flex; gap: 15px; margin-top: 15px;">
+                        <div style="flex:1"><label>Date</label><input type="date" id="auditDate"
+                                onchange="checkExistingAudit()"></div>
+                        <div style="flex:1"><label>Opening Balance</label>
+                            <div style="display:flex; align-items:center;">
+                                <span style="font-weight:bold; color:#777; margin-right:5px;"
+                                    class="currency-label">$</span>
+                                <input type="number" id="auditOpening" step="0.01" oninput="calcAudit()">
+                            </div>
+                        </div>
+                    </div>
+
+                    <label style="margin-top:20px;">Closing Balance (Actual Closeout)</label>
+                    <div style="display:flex; align-items:center;">
+                        <span style="font-weight:bold; color:#777; margin-right:5px;" class="currency-label">$</span>
+                        <input type="number" id="auditClosing" step="0.01" oninput="calcAudit()"
+                            style="border: 2px solid #3498db">
+                    </div>
+
+                    <label style="margin-top:20px;">Individual Transactions (Punch List)</label>
+                    <div id="sales-container-audit" class="sales-list">
+                    </div>
+                    <button onclick="addInputAudit()"
+                        style="margin-top:10px; cursor:pointer; font-size:11px; background: none; border: 1px solid #ccc; padding: 5px 10px; border-radius: 4px;">+
+                        Add Sale Entry</button>
+
+                    <label style="margin-top:20px;">Other Expenses</label>
+                    <div style="display:flex; align-items:center;">
+                        <span style="font-weight:bold; color:#777; margin-right:5px;" class="currency-label">$</span>
+                        <input type="number" id="auditExpenses" value="0.00" step="0.01" oninput="calcAudit()">
+                    </div>
+
+                    <button class="btn-success" onclick="saveAuditEntry()" id="saveAuditBtn"
+                        style="margin-top: 25px;">Save / Update Audit Record</button>
+                </div>
+            </div>
+
+            <div id="auditFiltersContainer"></div>
+            <div class="section-header" style="margin-top: 15px;">Live Audit History</div>
+            <table id="auditDailyTable">
+                <thead>
+                    <tr>
+                        <th style="cursor: pointer;" onclick="toggleAuditSort('date')">Date <span id="auditSortIconDate"
+                                style="color:rgba(255, 255, 255, 0.5); font-size:10px;">▼</span></th>
+                        <th id="hdrBranchAudit" style="cursor: pointer;" onclick="toggleAuditSort('branch')">Branch
+                            <span id="auditSortIconBranch"
+                                style="color:rgba(255, 255, 255, 0.5); font-size:10px;">↕</span>
+                        </th>
+                        <th>Opening</th>
+                        <th>Closing</th>
+                        <th>Cash Out</th>
+                        <th>Sales</th>
+                        <th>Tips</th>
+                        <th>Other Exp</th>
+                        <th>Closing Bal</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="auditHistoryBody"></tbody>
+            </table>
         </div>
 
         <div id="reportsView" class="view-section">
@@ -279,6 +445,44 @@
                             <th>Total Hours</th>
                             <th>Total Pay</th>
                             <th>Clear History</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="auditReportsView" class="view-section">
+            <h2 style="text-align: center;">Cash & Tips Reports</h2>
+
+            <div id="auditReportsFiltersContainer"></div>
+
+            <div class="flex-container" style="margin-top: 20px;">
+                <div class="card clickable-chart" style="flex: 1; cursor: pointer; transition: transform 0.2s;"
+                    id="auditTrendGraphCard" onclick="toggleExpandChart('auditTrendGraphCard')" title="Click to Expand">
+                    <h3 style="text-align: center; margin-top: 0; margin-bottom: 15px;">Tips & Net Flow Trend 🔍</h3>
+                    <div class="chart-container">
+                        <canvas id="auditTrendGraph"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div id="auditBranchSummarySection">
+                <div class="section-header" style="margin-top: 30px;">Accumulated Branch Audit Totals<span
+                        class="tooltip-icon" style="margin-left: 10px;">i<span class="tooltip-text">A summary of
+                            accumulated cash, sales, and tips by branch.</span></span></div>
+                <table id="auditBranchSummaryTable">
+                    <thead>
+                        <tr>
+                            <th>Branch</th>
+                            <th>Opening (Total)</th>
+                            <th>Closing (Total)</th>
+                            <th>Cash Out (Total)</th>
+                            <th>Gross Sales</th>
+                            <th>Total Tips</th>
+                            <th>Total Expenses</th>
+                            <th>Net Final</th>
+                            <th>Clear Branch History</th>
                         </tr>
                     </thead>
                     <tbody></tbody>
@@ -482,6 +686,10 @@
                         what modules you wish to see at any given moment via the new expanded Settings Panel, enabling
                         customized analytics views down to the individual module level. Includes the ability to
                         dynamically unlock advanced extended shift logs (Shift 4 & 5) when needed.</li>
+                    <li style="margin-bottom: 15px;"><strong>Cash & Tips Audit Module:</strong> <br>A specialized module
+                        added with advanced OCR image pre-processing. Easily scan faded or dark physical receipts to
+                        instantly extract cash-outs and individualized punch transactions, seamlessly reconciling net
+                        tips directly alongside your workforce payroll data.</li>
                     <li style="margin-bottom: 15px;"><strong>Secure Data Storage:</strong> <br>All information,
                         including configuration keys, exists entirely within your browser's persistent `localStorage`.
                         Zero system databases exist to be compromised.</li>

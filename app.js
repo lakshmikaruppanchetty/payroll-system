@@ -1,4 +1,6 @@
 let masterData = JSON.parse(localStorage.getItem("payroll_v20")) || [];
+let auditData = JSON.parse(localStorage.getItem("auditData_v20")) || [];
+let editingAuditId = null;
 let appSettings = JSON.parse(localStorage.getItem("settings_v20")) || {};
 appSettings.showBranch = appSettings.showBranch ?? false;
 appSettings.showSummary = appSettings.showSummary ?? false;
@@ -18,6 +20,11 @@ appSettings.lastBackupDate = appSettings.lastBackupDate ?? null;
 let editingId = null; let selectedId = null;
 let employeeChartInstance = null;
 let branchChartInstance = null;
+let auditTrendChartInstance = null;
+let auditSortCol = 'date';
+let auditSortAsc = false;
+let mainSortCol = 'date';
+let mainSortAsc = false;
 
 window.getCurrencySymbol = function () {
     let pref = localStorage.getItem("preferredCurrency_v20");
@@ -137,6 +144,12 @@ const tourSteps = [
         targetId: 'btnExportCsv',
         title: "Safety",
         text: "Always export your data at the end of the week to keep a safe backup."
+    },
+    {
+        tab: 'audit',
+        targetId: 'uploadAudit',
+        title: "Cash & Tips Audit",
+        text: "Extract and reconcile individual tips straight from receipts using AI."
     },
     {
         tab: 'settings',
@@ -405,19 +418,43 @@ function switchTab(tab) {
     if (shared) {
         if (tab === 'payroll') {
             document.getElementById("payrollFiltersContainer").appendChild(shared);
+            if (document.getElementById("clockToggleContainer")) document.getElementById("clockToggleContainer").style.display = 'flex';
+            if (document.getElementById("employeeFilterContainer")) document.getElementById("employeeFilterContainer").style.display = 'flex';
         } else if (tab === 'reports') {
             document.getElementById("reportsFiltersContainer").appendChild(shared);
+            if (document.getElementById("clockToggleContainer")) document.getElementById("clockToggleContainer").style.display = 'flex';
+            if (document.getElementById("employeeFilterContainer")) document.getElementById("employeeFilterContainer").style.display = 'flex';
+        } else if (tab === 'audit') {
+            document.getElementById("auditFiltersContainer").appendChild(shared);
+            if (document.getElementById("clockToggleContainer")) document.getElementById("clockToggleContainer").style.display = 'none';
+            if (document.getElementById("employeeFilterContainer")) document.getElementById("employeeFilterContainer").style.display = 'none';
+        } else if (tab === 'auditReports') {
+            document.getElementById("auditReportsFiltersContainer").appendChild(shared);
+            if (document.getElementById("clockToggleContainer")) document.getElementById("clockToggleContainer").style.display = 'none';
+            if (document.getElementById("employeeFilterContainer")) document.getElementById("employeeFilterContainer").style.display = 'none';
         }
     }
 
-    if (tab === 'reports') {
-        setTimeout(() => renderAll(), 50); // delay to let display:block apply fully
-    }
+    setTimeout(() => renderAll(), 50); // delay to let display:block apply fully
 
     if (window.innerWidth <= 768) {
         document.getElementById("sidebar").classList.remove("mobile-open");
     }
 }
+
+window.toggleSubMenu = function (id, el) {
+    const sm = document.getElementById(id);
+    const m = el.querySelector('.nav-arrow');
+    if (sm) {
+        if (sm.style.display === 'none') {
+            sm.style.display = 'block';
+            if (m) m.style.transform = 'rotate(180deg)';
+        } else {
+            sm.style.display = 'none';
+            if (m) m.style.transform = 'rotate(0deg)';
+        }
+    }
+};
 
 function toggleSidebar() {
     if (window.innerWidth <= 768) {
@@ -838,6 +875,122 @@ window.importCSV = function () {
     }; reader.readAsText(fileInput.files[0]);
 };
 
+window.importAuditCSV = function () {
+    const fileInput = document.getElementById('auditCsvImport'); if (!fileInput.files[0]) return;
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        try {
+            const rawText = e.target.result;
+            const rows = [];
+            let inQ = false; let currentLine = "";
+            for (let i = 0; i < rawText.length; i++) {
+                const char = rawText[i];
+                if (char === '"') inQ = !inQ;
+                if (char === '\n' && !inQ) {
+                    if (currentLine.trim()) rows.push(currentLine);
+                    currentLine = "";
+                } else if (char === '\r' && !inQ) {
+                    if (rawText[i + 1] === '\n') i++;
+                    if (currentLine.trim()) rows.push(currentLine);
+                    currentLine = "";
+                } else { currentLine += char; }
+            }
+            if (currentLine.trim()) rows.push(currentLine);
+
+            let aC = 0, uC = 0;
+            if (rows.length > 0) {
+                for (let i = 1; i < rows.length; i++) {
+                    const row = rows[i];
+                    if (row.toLowerCase().includes("summary data")) break;
+
+                    const cols = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(v => v.replace(/"/g, '').trim());
+                    if (cols.length < 8) continue;
+
+                    const date = cols[0];
+                    if (!date || !date.includes('-')) continue;
+                    const branch = cols[1];
+                    const opening = parseFloat(cols[2]) || 0;
+                    const closing = parseFloat(cols[3]) || 0;
+                    const salesTotal = parseFloat(cols[5]) || 0;
+                    const expenses = parseFloat(cols[7]) || 0;
+
+                    const entry = {
+                        id: Date.now() + i,
+                        date: date,
+                        branch: branch,
+                        opening: opening,
+                        closing: closing,
+                        sales: [salesTotal],
+                        expenses: expenses
+                    };
+
+                    const exIdx = auditData.findIndex(ex => ex.date === date && ex.branch === branch);
+                    if (exIdx > -1) {
+                        auditData[exIdx] = entry; uC++;
+                    } else {
+                        auditData.push(entry); aC++;
+                    }
+                }
+            }
+            localStorage.setItem("auditData_v20", JSON.stringify(auditData));
+            renderAll();
+            alert(`Audit Synced: ${aC} new, ${uC} updated.`);
+        } catch (e) { alert("Format Error: " + e.message); }
+        fileInput.value = '';
+    }; reader.readAsText(fileInput.files[0]);
+};
+
+window.updateAuditBranchFromDropdown = function () {
+    const sel = document.getElementById("auditBranchSelectDropdown").value;
+    if (sel) {
+        document.getElementById("auditBranchName").value = sel;
+        if (typeof checkExistingAudit === 'function') checkExistingAudit();
+    }
+};
+
+window.checkExistingAudit = function () {
+    const branch = document.getElementById("auditBranchName").value;
+    const date = document.getElementById("auditDate").value;
+    if (!branch || !date) return;
+    const e = auditData.find(x => x.branch === branch && x.date === date);
+    if (e) {
+        if (editingAuditId && editingAuditId === e.id) return;
+        if (document.getElementById("auditOpening").value !== "" && !editingAuditId) {
+            if (!confirm(`An existing audit record for ${branch} on ${date} was found. Would you like to load and overwrite your current form data?`)) return;
+        }
+        editingAuditId = e.id;
+        document.getElementById('auditDate').value = e.date;
+        document.getElementById('auditBranchName').value = e.branch || "";
+        document.getElementById('auditOpening').value = e.opening || "";
+        document.getElementById('auditClosing').value = e.closing || "";
+        document.getElementById('auditExpenses').value = e.expenses || "0";
+
+        const container = document.getElementById('sales-container-audit');
+        container.innerHTML = "";
+
+        if (e.sales && e.sales.length > 0) {
+            e.sales.forEach(val => {
+                const el = document.createElement('div');
+                el.style.display = "flex"; el.style.alignItems = "center"; el.style.marginBottom = "5px";
+                el.innerHTML = `
+                <span style="font-weight:bold; color:#777; margin-right:5px;" class="currency-label">${getCurrencySymbol()}</span>
+                <input type="number" class="sale-in-audit" step="0.01" value="${val}" oninput="calcAudit()" style="flex:1">
+                <button onclick="this.parentElement.remove(); calcAudit()" style="background:none; border:none; color:red; cursor:pointer; margin-left:5px; font-weight:bold;">×</button>`;
+                container.appendChild(el);
+            });
+        } else {
+            addInputAudit();
+        }
+        calcAudit();
+        document.getElementById("saveAuditBtn").innerText = "Update Audit Record";
+    } else {
+        if (editingAuditId !== null) {
+            editingAuditId = null;
+            document.getElementById("saveAuditBtn").innerText = "Save / Update Audit Record";
+        }
+    }
+};
+
 window.updateFilter = function () {
     const vEmp = document.getElementById("viewFilter").value;
     const vBranch = document.getElementById("branchFilter").value;
@@ -861,8 +1014,36 @@ window.renderAll = function () {
     const dailyBody = document.getElementById("dailyTableBody"); const summaryBody = document.querySelector("#summaryTable tbody");
     const vEmp = document.getElementById("viewFilter").value; const vBranch = document.getElementById("branchFilter").value;
     dailyBody.innerHTML = ""; summaryBody.innerHTML = "";
-    masterData.sort((a, b) => a.name.localeCompare(b.name) || a.date.localeCompare(b.date));
-    const emps = [...new Set(masterData.map(e => e.name))], branches = [...new Set(masterData.map(e => e.branch))];
+    masterData.sort((a, b) => {
+        let nameCmp = a.name.localeCompare(b.name);
+        if (nameCmp !== 0) return nameCmp;
+
+        let valA, valB;
+        if (mainSortCol === 'branch') {
+            valA = (a.branch || '').toLowerCase(); valB = (b.branch || '').toLowerCase();
+        } else {
+            valA = a.date; valB = b.date;
+        }
+
+        if (valA < valB) return mainSortAsc ? -1 : 1;
+        if (valA > valB) return mainSortAsc ? 1 : -1;
+        if (mainSortCol !== 'date') return b.date.localeCompare(a.date);
+        return 0;
+    });
+
+    const mDIcon = document.getElementById("mainSortIconDate");
+    const mBIcon = document.getElementById("mainSortIconBranch");
+    if (mDIcon) {
+        mDIcon.innerText = mainSortCol === 'date' ? (mainSortAsc ? '▲' : '▼') : '↕';
+        mDIcon.style.color = mainSortCol === 'date' ? '#ffc107' : '#ffffff';
+        mDIcon.style.fontSize = '14px';
+    }
+    if (mBIcon) {
+        mBIcon.innerText = mainSortCol === 'branch' ? (mainSortAsc ? '▲' : '▼') : '↕';
+        mBIcon.style.color = mainSortCol === 'branch' ? '#ffc107' : '#ffffff';
+        mBIcon.style.fontSize = '14px';
+    }
+    const emps = [...new Set(masterData.map(e => e.name))].sort(), branches = [...new Set([...masterData.map(e => e.branch), ...(typeof auditData !== 'undefined' ? auditData.map(e => e.branch) : [])])].sort();
     const eS = document.getElementById("empSelect"), bS = document.getElementById("branchSelectDropdown"), bET = document.getElementById("bulkEmpTarget");
     const cE = eS.value, cB = bS.value, cBET = bET.value;
     eS.style.display = emps.length <= 1 ? "none" : "";
@@ -871,13 +1052,24 @@ window.renderAll = function () {
     bET.innerHTML = emps.length > 1 ? '<option value="ALL">ALL Employees</option><option value="SELECTED">Selected Only</option>' : '<option value="SELECTED">Selected Only</option>';
     if (cBET && Array.from(bET.options).some(o => o.value === cBET)) bET.value = cBET;
 
-    const filterEmps = [...new Set(masterData.filter(e => !vBranch || vBranch === "ALL" || e.branch === vBranch).map(e => e.name))];
-    const filterBranches = [...new Set(masterData.filter(e => !vEmp || vEmp === "ALL" || e.name === vEmp).map(e => e.branch))];
+    const filterEmps = [...new Set(masterData.filter(e => !vBranch || vBranch === "ALL" || e.branch === vBranch).map(e => e.name))].sort();
+    const isAuditActive = (document.getElementById('auditView') && document.getElementById('auditView').classList.contains('active')) || (document.getElementById('auditReportsView') && document.getElementById('auditReportsView').classList.contains('active'));
+    const effectiveVEmp = isAuditActive ? "ALL" : vEmp;
+    const filterBranches = [...new Set([
+        ...masterData.filter(e => !effectiveVEmp || effectiveVEmp === "ALL" || e.name === effectiveVEmp).map(e => e.branch),
+        ...(typeof auditData !== 'undefined' && (!effectiveVEmp || effectiveVEmp === "ALL") ? auditData.map(e => e.branch) : [])
+    ])].sort();
 
     emps.forEach(n => { eS.innerHTML += `<option value="${n}">${n}</option>`; });
     filterEmps.forEach(n => { document.getElementById("viewFilter").innerHTML += `<option value="${n}">${n}</option>`; });
 
     bS.innerHTML = '<option value="">-- Select Branch --</option>'; document.getElementById("branchFilter").innerHTML = '<option value="ALL">All Branches</option>';
+    const aBS = document.getElementById("auditBranchSelectDropdown");
+    if (aBS) { const cabS = aBS.value; aBS.innerHTML = '<option value="">-- Select Branch --</option>'; branches.forEach(b => { aBS.innerHTML += `<option value="${b}">${b}</option>`; }); aBS.value = (cabS === "ALL" || !cabS) ? "" : cabS; }
+
+    const abS = document.getElementById("auditBulkBranchSelect");
+    if (abS) { const curAb = abS.value; abS.innerHTML = '<option value="">-- Target Branch --</option><option value="ALL">ALL Branches</option>'; branches.forEach(b => { abS.innerHTML += `<option value="${b}">${b}</option>`; }); abS.value = (curAb && ["ALL", ...branches].includes(curAb)) ? curAb : ""; }
+
     branches.forEach(b => { bS.innerHTML += `<option value="${b}">${b}</option>`; });
     filterBranches.forEach(b => { document.getElementById("branchFilter").innerHTML += `<option value="${b}">${b}</option>`; });
 
@@ -979,6 +1171,8 @@ window.renderAll = function () {
     }
 
     renderCharts(filteredEmps, display);
+    if (typeof renderAuditData === "function") renderAuditData();
+    if (typeof renderAuditReports === "function") renderAuditReports();
 };
 
 function renderCharts(filteredEmps, displayData) {
@@ -1204,7 +1398,13 @@ window.deleteEntry = function (id) {
 window.deleteEmployeeBulk = function (n) {
     const p = prompt("Security PIN required to clear this employee history:");
     if (p === appSettings.securityPin) {
-        if (confirm("Clear history for " + n + "?")) { masterData = masterData.filter(e => e.name !== n); localStorage.setItem("payroll_v20", JSON.stringify(masterData)); renderAll(); }
+        if (confirm("Clear history for " + n + "?")) {
+            masterData = masterData.filter(e => e.name !== n);
+            auditData = auditData.filter(e => e.name !== n);
+            localStorage.setItem("payroll_v20", JSON.stringify(masterData));
+            localStorage.setItem("auditData_v20", JSON.stringify(auditData));
+            renderAll();
+        }
     } else if (p) { alert("Incorrect PIN."); }
 };
 window.clearBranchSecure = function (branch) {
@@ -1212,7 +1412,9 @@ window.clearBranchSecure = function (branch) {
     if (p === appSettings.securityPin) {
         if (confirm(`Permanently wipe all records for branch: ${branch}?`)) {
             masterData = masterData.filter(e => e.branch !== branch);
+            auditData = auditData.filter(e => e.branch !== branch);
             localStorage.setItem("payroll_v20", JSON.stringify(masterData));
+            localStorage.setItem("auditData_v20", JSON.stringify(auditData));
             renderAll();
         }
     } else if (p) {
@@ -1225,7 +1427,9 @@ window.clearAllTablesSecure = function () {
     if (p === appSettings.securityPin) {
         if (confirm("Permanently wipe database?")) {
             masterData = [];
+            auditData = [];
             localStorage.removeItem("payroll_v20");
+            localStorage.removeItem("auditData_v20");
             renderAll();
         }
     } else if (p) {
@@ -1234,53 +1438,98 @@ window.clearAllTablesSecure = function () {
 };
 
 window.exportToExcel = function () {
-    const showExt = appSettings.showExtendedShifts;
-    let csv = showExt ? "Date,Employee,Branch,Shift 1,Shift 2,Shift 3,Shift 4,Shift 5,Total Hours,Hourly Rate,Total Pay\n" : "Date,Employee,Branch,Shift 1,Shift 2,Shift 3,Total Hours,Hourly Rate,Total Pay\n";
-    const curFilter = document.getElementById("viewFilter").value;
-    const curBranchFilter = document.getElementById("branchFilter").value;
+    const isAuditActive = document.getElementById('auditView').classList.contains('active');
 
-    let curData = masterData.filter(d => {
-        let ok = true;
-        if (curFilter && curFilter !== "ALL") ok = d.name === curFilter;
-        if (ok && curBranchFilter && curBranchFilter !== "ALL") ok = d.branch === curBranchFilter;
-        const sD = document.getElementById("filterStartDate").value;
-        const eD = document.getElementById("filterEndDate").value;
-        if (ok && sD) ok = d.date >= sD;
-        if (ok && eD) ok = d.date <= eD;
-        return ok;
-    });
+    if (isAuditActive) {
+        let csv = "Date,Branch,Opening Balance,Closing Balance,Cash Out,Sales Total,Tips,Other Expenses,Closing Balance\n";
+        const curBranchFilter = document.getElementById("branchFilter").value;
 
-    curData.forEach(d => {
-        if (showExt) {
-            csv += `"${d.date}","${d.name}","${d.branch}","${d.s1s}-${d.s1e}","${d.s2s}-${d.s2e}","${d.s3s}-${d.s3e}","${d.s4s || ''}-${d.s4e || ''}","${d.s5s || ''}-${d.s5e || ''}",${decToT(d.total)},${d.rate},${d.pay}\n`;
-        } else {
-            csv += `"${d.date}","${d.name}","${d.branch}","${d.s1s}-${d.s1e}","${d.s2s}-${d.s2e}","${d.s3s}-${d.s3e}",${decToT(d.total)},${d.rate},${d.pay}\n`;
-        }
-    });
+        let curData = auditData.filter(d => {
+            let ok = true;
+            if (curBranchFilter && curBranchFilter !== "ALL") ok = d.branch === curBranchFilter;
+            const sD = document.getElementById("filterStartDate").value;
+            const eD = document.getElementById("filterEndDate").value;
+            if (ok && sD) ok = d.date >= sD;
+            if (ok && eD) ok = d.date <= eD;
+            return ok;
+        });
 
-    csv += "\nSummary Data\n";
-    csv += "Employee,Branch,Total Hours,Cumulative Pay\n";
-    const emps = [...new Set(curData.map(e => e.name))];
-    emps.forEach(n => {
-        let ent = curData.filter(x => x.name === n);
-        let h = ent.reduce((s, c) => s + c.total, 0);
-        let p = ent.reduce((s, c) => s + parseFloat(c.pay), 0);
-        csv += `"${n}","${ent[0].branch}",${decToT(h)},${p.toFixed(2)}\n`;
-    });
+        let tCashOut = 0, tSales = 0, tTips = 0, tExp = 0, tNet = 0;
 
-    appSettings.lastBackupDate = Date.now();
-    saveSettings();
-    if (typeof renderBackupReminder === "function") renderBackupReminder();
+        curData.forEach(d => {
+            const o = parseFloat(d.opening) || 0;
+            const c = parseFloat(d.closing) || 0;
+            const ex = parseFloat(d.expenses) || 0;
+            const sTotal = (d.sales || []).reduce((sum, v) => sum + (parseFloat(v) || 0), 0);
+            const cout = c - o;
+            const tips = cout - sTotal;
+            const net = c - cout - ex;
 
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = 'payroll_report.csv';
-    a.click(); window.URL.revokeObjectURL(url);
+            tCashOut += cout; tSales += sTotal; tTips += tips; tExp += ex; tNet += net;
+
+            csv += `"${d.date}","${d.branch || ''}",${o.toFixed(2)},${c.toFixed(2)},${cout.toFixed(2)},${sTotal.toFixed(2)},${tips.toFixed(2)},${ex.toFixed(2)},${net.toFixed(2)}\n`;
+        });
+
+        csv += `\n"TOTALS",,"N/A","N/A",${tCashOut.toFixed(2)},${tSales.toFixed(2)},${tTips.toFixed(2)},${tExp.toFixed(2)},${tNet.toFixed(2)}\n`;
+
+        appSettings.lastBackupDate = Date.now();
+        saveSettings();
+        if (typeof renderBackupReminder === "function") renderBackupReminder();
+
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = 'audit_report.csv';
+        a.click(); window.URL.revokeObjectURL(url);
+    } else {
+        const showExt = appSettings.showExtendedShifts;
+        let csv = showExt ? "Date,Employee,Branch,Shift 1,Shift 2,Shift 3,Shift 4,Shift 5,Total Hours,Hourly Rate,Total Pay\n" : "Date,Employee,Branch,Shift 1,Shift 2,Shift 3,Total Hours,Hourly Rate,Total Pay\n";
+        const curFilter = document.getElementById("viewFilter").value;
+        const curBranchFilter = document.getElementById("branchFilter").value;
+
+        let curData = masterData.filter(d => {
+            let ok = true;
+            if (curFilter && curFilter !== "ALL") ok = d.name === curFilter;
+            if (ok && curBranchFilter && curBranchFilter !== "ALL") ok = d.branch === curBranchFilter;
+            const sD = document.getElementById("filterStartDate").value;
+            const eD = document.getElementById("filterEndDate").value;
+            if (ok && sD) ok = d.date >= sD;
+            if (ok && eD) ok = d.date <= eD;
+            return ok;
+        });
+
+        curData.forEach(d => {
+            if (showExt) {
+                csv += `"${d.date}","${d.name}","${d.branch}","${d.s1s}-${d.s1e}","${d.s2s}-${d.s2e}","${d.s3s}-${d.s3e}","${d.s4s || ''}-${d.s4e || ''}","${d.s5s || ''}-${d.s5e || ''}",${decToT(d.total)},${d.rate},${d.pay}\n`;
+            } else {
+                csv += `"${d.date}","${d.name}","${d.branch}","${d.s1s}-${d.s1e}","${d.s2s}-${d.s2e}","${d.s3s}-${d.s3e}",${decToT(d.total)},${d.rate},${d.pay}\n`;
+            }
+        });
+
+        csv += "\nSummary Data\n";
+        csv += "Employee,Branch,Total Hours,Cumulative Pay\n";
+        const emps = [...new Set(curData.map(e => e.name))];
+        emps.forEach(n => {
+            let ent = curData.filter(x => x.name === n);
+            let h = ent.reduce((s, c) => s + c.total, 0);
+            let p = ent.reduce((s, c) => s + parseFloat(c.pay), 0);
+            csv += `"${n}","${ent[0].branch}",${decToT(h)},${p.toFixed(2)}\n`;
+        });
+
+        appSettings.lastBackupDate = Date.now();
+        saveSettings();
+        if (typeof renderBackupReminder === "function") renderBackupReminder();
+
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = 'payroll_report.csv';
+        a.click(); window.URL.revokeObjectURL(url);
+    }
 };
 
 window.exportToPDF = function () {
+    const isAuditActive = document.getElementById('auditView').classList.contains('active');
     const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
+    const doc = new jsPDF(isAuditActive ? 'landscape' : 'portrait');
 
     // Header section
     let currentY = 15;
@@ -1318,7 +1567,64 @@ window.exportToPDF = function () {
     doc.text(filterText, 14, currentY);
     currentY += 10;
 
-    // Gather filtered data identical to CSV export
+    if (isAuditActive) {
+        doc.setFontSize(18);
+        doc.text("Cash & Tips Audit Report", 14, currentY);
+        doc.setFontSize(10);
+        currentY += 6;
+        doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, currentY);
+        currentY += 6;
+        let filterText = "Filters Active: ";
+        if (curBranchFilter && curBranchFilter !== "ALL") filterText += `Branch [${curBranchFilter}]  `;
+        if (sD || eD) filterText += `Date [${sD || 'Any'} to ${eD || 'Any'}]`;
+        if (filterText === "Filters Active: ") filterText += "None";
+        doc.text(filterText, 14, currentY);
+        currentY += 10;
+
+        let curData = auditData.filter(d => {
+            let ok = true;
+            if (curBranchFilter && curBranchFilter !== "ALL") ok = d.branch === curBranchFilter;
+            if (ok && sD) ok = d.date >= sD;
+            if (ok && eD) ok = d.date <= eD;
+            return ok;
+        });
+
+        if (curData.length === 0) return alert("No audit data to export!");
+
+        const tableHeaders = [["Date", "Branch", "Opening", "Closing", "Cash Out", "Sales", "Tips", "Expenses", "Closing Bal"]];
+        const tableRows = curData.map(d => {
+            const o = parseFloat(d.opening) || 0;
+            const c = parseFloat(d.closing) || 0;
+            const ex = parseFloat(d.expenses) || 0;
+            const sTotal = (d.sales || []).reduce((sum, v) => sum + (parseFloat(v) || 0), 0);
+            const cout = c - o;
+            const tips = cout - sTotal;
+            const net = c - cout - ex;
+            return [
+                d.date,
+                d.branch,
+                `${getCurrencySymbol()}${o.toFixed(2)}`,
+                `${getCurrencySymbol()}${c.toFixed(2)}`,
+                `${getCurrencySymbol()}${cout.toFixed(2)}`,
+                `${getCurrencySymbol()}${sTotal.toFixed(2)}`,
+                `${getCurrencySymbol()}${tips.toFixed(2)}`,
+                `${getCurrencySymbol()}${ex.toFixed(2)}`,
+                `${getCurrencySymbol()}${net.toFixed(2)}`
+            ];
+        });
+
+        doc.autoTable({
+            startY: currentY,
+            head: tableHeaders,
+            body: tableRows,
+            theme: 'striped',
+            styles: { fontSize: 8 },
+            headStyles: { fillColor: [52, 58, 64] }
+        });
+        doc.save('audit_report.pdf');
+        return;
+    }
+
     let curData = masterData.filter(d => {
         let ok = true;
         if (curFilter && curFilter !== "ALL") ok = d.name === curFilter;
@@ -1709,4 +2015,582 @@ window.generatePayStub = function (employeeName) {
     doc.text(`Gross Pay: ${getCurrencySymbol()}${p.toFixed(2)}`, 14, currentY);
 
     doc.save(`PayStub_${employeeName.replace(/\s+/g, '_')}.pdf`);
+};
+
+// --- AUDIT TOOL LOGIC ---
+let showPreprocessedAudit = false;
+
+document.getElementById('uploadAudit').addEventListener('change', function (e) {
+    const file = e.target.files[0];
+    const status = document.getElementById('ocr-status-audit');
+    if (!file) return;
+
+    if (file.type === 'application/pdf') {
+        status.innerText = "❌ PDFs not supported for Audit yet. Please upload an image format.";
+        return;
+    }
+
+    status.innerText = "⏳ Loading image...";
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+        const img = document.getElementById('preview-img-audit');
+        img.onload = function () {
+            if (appSettings.ocrEngine === 'free') {
+                preprocessImageAudit(img, function (processedDataUrl) {
+                    document.getElementById('toggle-view-btn-audit').style.display = "inline-block";
+                    status.innerText = "⏳ Processing Data with internal OCR...";
+
+                    Tesseract.recognize(processedDataUrl, 'eng', {
+                        logger: m => {
+                            if (m.status === 'recognizing text') {
+                                status.innerText = `⏳ Processing Punch Data... ${Math.round(m.progress * 100)}%`;
+                            }
+                        }
+                    }).then(({ data: { text } }) => {
+                        status.innerText = "✅ Scan Complete. Verify values below.";
+                        processTextAudit(text);
+                    }).catch((err) => {
+                        console.error("Tesseract Error", err);
+                        status.innerText = "❌ Scan failed. Use viewer to enter manually.";
+                    });
+                });
+            } else if (appSettings.ocrEngine === 'openai') {
+                if (!appSettings.llmApiKey) {
+                    status.innerText = "❌ Please enter OpenAI API Key in Settings.";
+                    return;
+                }
+                status.innerText = "⏳ Processing Data with OpenAI Vision...";
+                const base64 = ev.target.result.split(',')[1];
+
+                fetch("https://api.openai.com/v1/chat/completions", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${appSettings.llmApiKey}` },
+                    body: JSON.stringify({
+                        model: "gpt-4o",
+                        messages: [{
+                            role: "user",
+                            content: [
+                                { type: "text", text: "Extract the exact text from this cashout receipt document exactly as shown." },
+                                { type: "image_url", image_url: { url: `data:image/jpeg;base64,${base64}` } }
+                            ]
+                        }],
+                        max_tokens: 300
+                    })
+                }).then(res => res.json()).then(data => {
+                    if (data.error) throw new Error(data.error.message);
+                    status.innerText = "✅ AI Analysis Complete. Verify values.";
+                    processTextAudit(data.choices[0].message.content);
+                }).catch(err => {
+                    console.error("OpenAI Error", err);
+                    status.innerText = "❌ AI Analysis failed.";
+                });
+            } else if (appSettings.ocrEngine === 'gemini') {
+                if (!appSettings.geminiApiKey) {
+                    status.innerText = "❌ Please enter Gemini API Key in Settings.";
+                    return;
+                }
+                status.innerText = "⏳ Processing Data with Google Gemini...";
+                const base64 = ev.target.result.split(',')[1];
+
+                fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${appSettings.geminiApiKey}`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [
+                                { text: "Extract all the text from this cashout receipt document exactly as shown." },
+                                { inline_data: { mime_type: "image/jpeg", data: base64 } }
+                            ]
+                        }]
+                    })
+                }).then(res => res.json()).then(data => {
+                    if (data.error) throw new Error(data.error.message);
+                    status.innerText = "✅ AI Analysis Complete. Verify values.";
+                    processTextAudit(data.candidates[0].content.parts[0].text);
+                }).catch(err => {
+                    console.error("Gemini Error", err);
+                    status.innerText = "❌ AI Analysis failed.";
+                });
+            }
+        };
+        img.src = ev.target.result;
+        img.style.display = showPreprocessedAudit ? "none" : "block";
+        document.getElementById('hintAudit').style.display = "none";
+    };
+    reader.onerror = () => { status.innerText = "❌ Failed to read file."; };
+    reader.readAsDataURL(file);
+});
+
+function toggleImageViewAudit() {
+    showPreprocessedAudit = !showPreprocessedAudit;
+    const img = document.getElementById('preview-img-audit');
+    const canvas = document.getElementById('preprocessed-preview-audit');
+    const btn = document.getElementById('toggle-view-btn-audit');
+
+    if (showPreprocessedAudit) {
+        img.style.display = "none";
+        canvas.style.display = "block";
+        btn.innerText = "Show Original Image";
+    } else {
+        img.style.display = "block";
+        canvas.style.display = "none";
+        btn.innerText = "Show Pre-processed Image";
+    }
+}
+
+function preprocessImageAudit(imgElement, callback) {
+    const canvas = document.getElementById('preprocessed-preview-audit');
+    const ctx = canvas.getContext('2d');
+
+    let width = imgElement.naturalWidth;
+    let height = imgElement.naturalHeight;
+    const MAX_DIMENSION = 2000;
+
+    if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+        if (width > height) { height = height * (MAX_DIMENSION / width); width = MAX_DIMENSION; }
+        else { width = width * (MAX_DIMENSION / height); height = MAX_DIMENSION; }
+    }
+    canvas.width = width;
+    canvas.height = height;
+    canvas.style.maxWidth = '100%';
+    canvas.style.maxHeight = '100%';
+    ctx.drawImage(imgElement, 0, 0, width, height);
+
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imageData.data;
+    const contrast = 80;
+    const factor = (259 * (contrast + 255)) / (255 * (259 - contrast));
+    for (let i = 0; i < data.length; i += 4) {
+        let r = data[i], g = data[i + 1], b = data[i + 2];
+        let gray = 0.299 * r + 0.587 * g + 0.114 * b;
+        let val = factor * (gray - 128) + 128;
+        val = Math.max(0, Math.min(255, val));
+        data[i] = data[i + 1] = data[i + 2] = val;
+    }
+    ctx.putImageData(imageData, 0, 0);
+    callback(canvas.toDataURL('image/png'));
+}
+
+function findAmountAudit(text, patterns) {
+    for (let p of patterns) {
+        const match = text.match(p);
+        if (match && match[1]) {
+            return match[1].replace(/[^\d.]/g, '');
+        }
+    }
+    return null;
+}
+
+function processTextAudit(raw) {
+    let txt = raw.replace(/,/g, '').replace(/O/g, '0').replace(/l/g, '1').replace(/I/g, '1');
+    const startingPatterns = [/Starting[\s\w]*?Cash[\s\w:\.\-]*?\$?\s*([\d]+\.\d{2})/i, /St[a-z]*\s*Ca[a-z]*[\s\w:\.\-]*?\$?\s*([\d]+\.\d{2})/i, /5tarting[\s\w]*?Ca5h[\s\w:\.\-]*?\$?\s*([\d]+\.\d{2})/i, /Start[\s\w]*\$?\s*([\d]+\.\d{2})/i];
+    let openVal = findAmountAudit(txt, startingPatterns);
+    if (openVal) document.getElementById('auditOpening').value = openVal;
+
+    const closeoutPatterns = [/Actual[\s\w]*?Closeout[\s\w:\.\-]*?\$?\s*([\d]+\.\d{2})/i, /Act[a-z]*\s*Clo[a-z]*[\s\w:\.\-]*?\$?\s*([\d]+\.\d{2})/i, /Actua1[\s\w]*?C1oseout[\s\w:\.\-]*?\$?\s*([\d]+\.\d{2})/i, /Closeout[\s\w]*?\$?\s*([\d]+\.\d{2})/i];
+    let closeVal = findAmountAudit(txt, closeoutPatterns);
+    if (closeVal) document.getElementById('auditClosing').value = closeVal;
+
+    const timeRegex = /(?:\d{1,2}[\:\.]\d{2})\s*(?:AM|PM|A\.M\.|P\.M\.)?[\s\w]*?\$?\s*([\d]+[\.\ ]\d{2})/gi;
+    let match;
+    const container = document.getElementById('sales-container-audit');
+    let found = [];
+    while ((match = timeRegex.exec(txt)) !== null) { let amountStr = match[1].replace(' ', '.'); found.push(amountStr); }
+    if (found.length > 0) {
+        container.innerHTML = '';
+        found.forEach(v => addInputAudit(v));
+    }
+    calcAudit();
+}
+
+function addInputAudit(val = "") {
+    const div = document.createElement('div');
+    div.className = "sale-row flex-container";
+    const count = document.querySelectorAll('#sales-container-audit .sale-row').length + 1;
+    div.innerHTML = `<span class="row-num" style="width:30px;font-weight:bold;color:#999;font-size:0.75rem;">#${count}</span>
+        <input type="number" step="0.01" class="sale-in-audit" value="${val}" oninput="calcAudit()" style="flex:1;">
+        <button class="btn-remove" onclick="removeInputAudit(this)" title="Remove Entry">✖</button>`;
+    document.getElementById('sales-container-audit').appendChild(div);
+}
+
+function removeInputAudit(btn) {
+    btn.parentElement.remove();
+    const rows = document.querySelectorAll('#sales-container-audit .sale-row');
+    rows.forEach((row, index) => { row.querySelector('.row-num').innerText = `#${index + 1}`; });
+    calcAudit();
+}
+
+function calcAudit() {
+    const open = parseFloat(document.getElementById('auditOpening').value) || 0;
+    const close = parseFloat(document.getElementById('auditClosing').value) || 0;
+    const exp = parseFloat(document.getElementById('auditExpenses').value) || 0;
+
+    const cashOut = close - open;
+    const sym = getCurrencySymbol();
+    document.getElementById('st-cashout').innerHTML = `<span class="currency-label">${sym}</span>${cashOut.toFixed(2)}`;
+
+    let sales = 0;
+    document.querySelectorAll('.sale-in-audit').forEach(el => sales += (parseFloat(el.value) || 0));
+    document.getElementById('st-sales').innerHTML = `<span class="currency-label">${sym}</span>${sales.toFixed(2)}`;
+
+    const tips = cashOut - sales;
+    document.getElementById('st-tips').innerHTML = `<span class="currency-label">${sym}</span>${tips.toFixed(2)}`;
+    document.getElementById('st-tips').style.color = tips < 0 ? "#e74c3c" : "#27ae60";
+    document.getElementById('st-final').innerHTML = `<span class="currency-label">${sym}</span>${(close - cashOut - exp).toFixed(2)}`;
+}
+
+function resetAuditForm() {
+    document.getElementById('auditDate').value = "";
+    document.getElementById('auditBranchName').value = "";
+    document.getElementById('auditOpening').value = "";
+    document.getElementById('auditClosing').value = "";
+    document.getElementById('sales-container-audit').innerHTML = "";
+    document.getElementById('auditExpenses').value = "0.00";
+    document.getElementById('uploadAudit').value = "";
+    document.getElementById('preview-img-audit').style.display = 'none';
+    document.getElementById('preprocessed-preview-audit').style.display = 'none';
+    document.getElementById('ocr-status-audit').innerText = '';
+    document.getElementById('toggle-view-btn-audit').style.display = 'none';
+    addInputAudit();
+    calcAudit();
+    editingAuditId = null;
+    document.getElementById('saveAuditBtn').innerText = "Save / Update Audit Record";
+}
+
+window.saveAuditEntry = function () {
+    const date = document.getElementById('auditDate').value;
+    const branch = document.getElementById('auditBranchName').value;
+    if (!date) { alert("Date is required."); return; }
+
+    let targetId = editingAuditId;
+    if (!targetId) {
+        const existing = auditData.find(a => a.date === date && a.branch === branch);
+        if (existing) {
+            if (!confirm(`An existing audit record for ${branch || 'the selected branch'} on ${date} already exists. Are you sure you want to overwrite it?`)) return;
+            targetId = existing.id;
+        }
+    }
+
+    const entry = {
+        id: targetId || Date.now(),
+        date: date,
+        branch: branch,
+        opening: document.getElementById('auditOpening').value,
+        closing: document.getElementById('auditClosing').value,
+        sales: Array.from(document.querySelectorAll('.sale-in-audit')).map(e => e.value),
+        expenses: document.getElementById('auditExpenses').value
+    };
+
+    if (targetId) {
+        const ix = auditData.findIndex(a => a.id === targetId);
+        if (ix > -1) auditData[ix] = entry;
+    } else {
+        auditData.push(entry);
+    }
+
+    localStorage.setItem("auditData_v20", JSON.stringify(auditData));
+    resetAuditForm();
+    renderAll();
+};
+
+window.deleteAuditEntry = function (id) {
+    const p = prompt("Security PIN required:");
+    if (p === appSettings.securityPin) {
+        if (confirm("Delete audit record?")) {
+            auditData = auditData.filter(e => e.id !== id);
+            localStorage.setItem("auditData_v20", JSON.stringify(auditData));
+            renderAll();
+        }
+    } else if (p) { alert("Incorrect PIN."); }
+};
+
+window.editAuditEntry = function (id) {
+    const entry = auditData.find(e => e.id === id);
+    if (!entry) return;
+    editingAuditId = entry.id;
+    document.getElementById('auditDate').value = entry.date;
+    document.getElementById('auditBranchName').value = entry.branch || "";
+    document.getElementById('auditOpening').value = entry.opening || "";
+    document.getElementById('auditClosing').value = entry.closing || "";
+    document.getElementById('auditExpenses').value = entry.expenses || "0";
+
+    const cont = document.getElementById('sales-container-audit');
+    cont.innerHTML = '';
+    if (entry.sales && entry.sales.length > 0) {
+        entry.sales.forEach(s => addInputAudit(s));
+    } else {
+        addInputAudit();
+    }
+    calcAudit();
+    document.getElementById('saveAuditBtn').innerText = "Update Audit Record";
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+
+window.renderAuditData = function () {
+    const body = document.getElementById('auditHistoryBody');
+    if (!body) return;
+    body.innerHTML = '';
+    const sym = getCurrencySymbol();
+
+    const vBranch = document.getElementById("branchFilter") ? document.getElementById("branchFilter").value : "ALL";
+    let fStart = document.getElementById("filterStartDate") ? document.getElementById("filterStartDate").value : null;
+    let fEnd = document.getElementById("filterEndDate") ? document.getElementById("filterEndDate").value : null;
+
+    let display = auditData.filter(e => {
+        let matchBranch = (vBranch === "ALL" || e.branch === vBranch);
+        let matchDate = true;
+        if (fStart || fEnd) {
+            let rd = new Date(e.date);
+            if (fStart && rd < new Date(fStart)) matchDate = false;
+            if (fEnd && rd > new Date(fEnd)) matchDate = false;
+        }
+        return matchBranch && matchDate;
+    });
+
+    display.sort((a, b) => {
+        let valA, valB;
+        if (auditSortCol === 'date') {
+            valA = a.date;
+            valB = b.date;
+        } else if (auditSortCol === 'branch') {
+            valA = (a.branch || '').toLowerCase();
+            valB = (b.branch || '').toLowerCase();
+        }
+
+        if (valA < valB) return auditSortAsc ? -1 : 1;
+        if (valA > valB) return auditSortAsc ? 1 : -1;
+        return 0;
+    });
+
+    const dIcon = document.getElementById("auditSortIconDate");
+    const bIcon = document.getElementById("auditSortIconBranch");
+    if (dIcon) {
+        dIcon.innerText = auditSortCol === 'date' ? (auditSortAsc ? '▲' : '▼') : '↕';
+        dIcon.style.color = auditSortCol === 'date' ? '#ffc107' : '#ffffff';
+        dIcon.style.fontSize = '14px';
+    }
+    if (bIcon) {
+        bIcon.innerText = auditSortCol === 'branch' ? (auditSortAsc ? '▲' : '▼') : '↕';
+        bIcon.style.color = auditSortCol === 'branch' ? '#ffc107' : '#ffffff';
+        bIcon.style.fontSize = '14px';
+    }
+
+    const hdrB = document.getElementById("hdrBranchAudit");
+    if (hdrB) hdrB.style.display = appSettings.showBranch ? '' : 'none';
+    const contB = document.getElementById("auditBranchContainer");
+    if (contB) contB.style.display = appSettings.showBranch ? 'block' : 'none';
+
+    let tCashOut = 0, tSales = 0, tTips = 0, tExp = 0, tNet = 0;
+
+    display.forEach(a => {
+        const o = parseFloat(a.opening) || 0;
+        const c = parseFloat(a.closing) || 0;
+        const ex = parseFloat(a.expenses) || 0;
+        const sTotal = (a.sales || []).reduce((sum, v) => sum + (parseFloat(v) || 0), 0);
+        const cout = c - o;
+        const tips = cout - sTotal;
+        const net = c - cout - ex;
+
+        tCashOut += cout; tSales += sTotal; tTips += tips; tExp += ex; tNet += net;
+
+        const d = a.date.split('-').slice(1).concat(a.date.split('-')[0]).join('-');
+
+        let brCell = appSettings.showBranch ? `<td>${a.branch}</td>` : '<td style="display:none"></td>';
+
+        body.innerHTML += `<tr>
+            <td>${d}</td>
+            ${brCell}
+            <td>${sym}${o.toFixed(2)}</td>
+            <td>${sym}${c.toFixed(2)}</td>
+            <td>${sym}${cout.toFixed(2)}</td>
+            <td>${sym}${sTotal.toFixed(2)}</td>
+            <td style="font-weight:bold; color:${tips < 0 ? '#e74c3c' : '#27ae60'}">${sym}${tips.toFixed(2)}</td>
+            <td>${sym}${ex.toFixed(2)}</td>
+            <td style="font-weight:bold">${sym}${net.toFixed(2)}</td>
+            <td>
+                <button class="btn-edit-small" onclick="editAuditEntry(${a.id})">Edit</button>
+                <button class="btn-danger-x" onclick="deleteAuditEntry(${a.id})">×</button>
+            </td>
+        </tr>`;
+    });
+
+    if (display.length > 0) {
+        body.innerHTML += `<tr style="background:#eaeff5; font-weight:bold;">
+            <td colspan="${appSettings.showBranch ? 4 : 3}" style="text-align:right">Audit Totals:</td>
+            <td>${sym}${tCashOut.toFixed(2)}</td>
+            <td>${sym}${tSales.toFixed(2)}</td>
+            <td style="color:${tTips < 0 ? '#e74c3c' : '#27ae60'}">${sym}${tTips.toFixed(2)}</td>
+            <td>${sym}${tExp.toFixed(2)}</td>
+            <td>${sym}${tNet.toFixed(2)}</td>
+            <td></td>
+        </tr>`;
+    }
+};
+
+window.executeAuditBulkUpdate = function () {
+    const sourceBranch = document.getElementById("auditBulkBranchSelect").value;
+    const targetName = document.getElementById("auditBranchName").value.trim();
+    if (!sourceBranch) return alert("Select a Target Branch Record from the dropdown to apply changes to.");
+    if (!targetName) return alert("Please type a new branch name in the 'Enter Branch' field to apply.");
+    const p = prompt("Security PIN required for global update:");
+    if (p === appSettings.securityPin) {
+        if (confirm(`Change branch for ${sourceBranch === "ALL" ? "ALL Audit records" : "Audit records matching '" + sourceBranch + "'"} to '${targetName}'?`)) {
+            let updated = 0;
+            auditData.forEach(e => {
+                if (sourceBranch === "ALL" || e.branch === sourceBranch) {
+                    e.branch = targetName;
+                    updated++;
+                }
+            });
+            if (updated > 0) {
+                localStorage.setItem("auditData_v20", JSON.stringify(auditData));
+                renderAll();
+                alert(`Mass Update Complete. ${updated} records changed.`);
+            } else {
+                alert("No records found to update.");
+            }
+        }
+    } else if (p) { alert("Incorrect PIN."); }
+};
+
+window.clearAuditBranchHistory = function (branch) {
+    const p = prompt("Security PIN required to wipe Cash & Tips Branch history:");
+    if (p === appSettings.securityPin) {
+        if (confirm(`Permanently delete all Audit records for branch '${branch}'?`)) {
+            auditData = auditData.filter(d => d.branch !== branch);
+            localStorage.setItem("auditData_v20", JSON.stringify(auditData));
+            renderAll();
+            alert(`Branch '${branch}' Cash & Tips data deleted.`);
+        }
+    } else if (p) { alert("Incorrect PIN."); }
+};
+
+window.renderAuditReports = function () {
+    const tableBody = document.querySelector("#auditBranchSummaryTable tbody");
+    if (!tableBody) return;
+    tableBody.innerHTML = '';
+    const sym = getCurrencySymbol();
+
+    const vBranch = document.getElementById("branchFilter") ? document.getElementById("branchFilter").value : "ALL";
+    let fStart = document.getElementById("filterStartDate") ? document.getElementById("filterStartDate").value : null;
+    let fEnd = document.getElementById("filterEndDate") ? document.getElementById("filterEndDate").value : null;
+
+    let display = auditData.filter(e => {
+        let matchBranch = (vBranch === "ALL" || e.branch === vBranch);
+        let matchDate = true;
+        if (fStart || fEnd) {
+            let rd = new Date(e.date);
+            if (fStart && rd < new Date(fStart)) matchDate = false;
+            if (fEnd && rd > new Date(fEnd)) matchDate = false;
+        }
+        return matchBranch && matchDate;
+    });
+
+    display.sort((a, b) => a.date.localeCompare(b.date));
+
+    // Audit Trend Chart
+    const ctx = document.getElementById("auditTrendGraph");
+    if (ctx && typeof Chart !== 'undefined') {
+        const dates = [...new Set(display.map(d => d.date))].sort();
+        const tipsData = [];
+        const netFlowData = [];
+
+        dates.forEach(d => {
+            let dateRecords = display.filter(r => r.date === d);
+            let dTips = 0, dNet = 0;
+            dateRecords.forEach(r => {
+                const o = parseFloat(r.opening) || 0;
+                const c = parseFloat(r.closing) || 0;
+                const ex = parseFloat(r.expenses) || 0;
+                const sTotal = (r.sales || []).reduce((sum, v) => sum + (parseFloat(v) || 0), 0);
+                const cout = c - o;
+                dTips += cout - sTotal;
+                dNet += c - cout - ex;
+            });
+            tipsData.push(dTips);
+            netFlowData.push(dNet);
+        });
+
+        if (auditTrendChartInstance) auditTrendChartInstance.destroy();
+        auditTrendChartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: dates,
+                datasets: [
+                    {
+                        label: `Total Tips (${sym})`,
+                        data: tipsData,
+                        backgroundColor: 'rgba(83, 211, 151, 0.7)',
+                        borderColor: 'rgba(83, 211, 151, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: `Closing Balance (${sym})`,
+                        data: netFlowData,
+                        type: 'line',
+                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 2,
+                        fill: false,
+                        tension: 0.2
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { y: { beginAtZero: true } },
+                plugins: { legend: { display: true, position: 'bottom' } }
+            }
+        });
+    }
+
+    // Branch Aggregation
+    const branches = [...new Set(display.map(d => d.branch))];
+    branches.forEach(b => {
+        let bR = display.filter(r => r.branch === b);
+        let tO = 0, tC = 0, tCO = 0, tS = 0, tTips = 0, tEx = 0, tNet = 0;
+
+        bR.forEach(r => {
+            const o = parseFloat(r.opening) || 0; tO += o;
+            const c = parseFloat(r.closing) || 0; tC += c;
+            const ex = parseFloat(r.expenses) || 0; tEx += ex;
+            const sTotal = (r.sales || []).reduce((sum, v) => sum + (parseFloat(v) || 0), 0); tS += sTotal;
+            const cout = c - o; tCO += cout;
+            const tips = cout - sTotal; tTips += tips;
+            const net = c - cout - ex; tNet += net;
+        });
+
+        tableBody.innerHTML += `<tr>
+            <td>${b || '<i>Unassigned</i>'}</td>
+            <td>${sym}${tO.toFixed(2)}</td>
+            <td>${sym}${tC.toFixed(2)}</td>
+            <td>${sym}${tCO.toFixed(2)}</td>
+            <td>${sym}${tS.toFixed(2)}</td>
+            <td style="color:${tTips < 0 ? '#e74c3c' : '#27ae60'}">${sym}${tTips.toFixed(2)}</td>
+            <td>${sym}${tEx.toFixed(2)}</td>
+            <td>${sym}${tNet.toFixed(2)}</td>
+            <td><button class="btn-danger-x" onclick="clearAuditBranchHistory('${b}')" title="Clear Branch">×</button></td>
+        </tr>`;
+    });
+};
+
+window.toggleAuditSort = function (col) {
+    if (auditSortCol === col) {
+        auditSortAsc = !auditSortAsc;
+    } else {
+        auditSortCol = col;
+        auditSortAsc = col === 'branch' ? true : false;
+    }
+    if (typeof renderAuditData === "function") renderAuditData();
+};
+
+window.toggleMainSort = function (col) {
+    if (mainSortCol === col) {
+        mainSortAsc = !mainSortAsc;
+    } else {
+        mainSortCol = col;
+        mainSortAsc = col === 'branch' ? true : false;
+    }
+    renderAll();
 };

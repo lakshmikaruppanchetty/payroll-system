@@ -25,6 +25,9 @@ let auditSortCol = 'date';
 let auditSortAsc = false;
 let mainSortCol = 'date';
 let mainSortAsc = false;
+let summarySortAsc = true;
+let branchSortAsc = true;
+let auditBranchSortAsc = true;
 
 window.getCurrencySymbol = function () {
     let pref = localStorage.getItem("preferredCurrency_v20");
@@ -416,6 +419,11 @@ function switchTab(tab) {
 
     const shared = document.getElementById("sharedFilters");
     if (shared) {
+        const empVal = document.getElementById("viewFilter") ? document.getElementById("viewFilter").value : null;
+        const branchVal = document.getElementById("branchFilter") ? document.getElementById("branchFilter").value : null;
+        const dateVal = document.getElementById("dateFilterPreset") ? document.getElementById("dateFilterPreset").value : null;
+        const clockVal = document.getElementById("clockToggle") ? document.getElementById("clockToggle").value : null;
+
         if (tab === 'payroll') {
             document.getElementById("payrollFiltersContainer").appendChild(shared);
             if (document.getElementById("clockToggleContainer")) document.getElementById("clockToggleContainer").style.display = 'flex';
@@ -433,6 +441,11 @@ function switchTab(tab) {
             if (document.getElementById("clockToggleContainer")) document.getElementById("clockToggleContainer").style.display = 'none';
             if (document.getElementById("employeeFilterContainer")) document.getElementById("employeeFilterContainer").style.display = 'none';
         }
+
+        if (empVal && document.getElementById("viewFilter")) document.getElementById("viewFilter").value = empVal;
+        if (branchVal && document.getElementById("branchFilter")) document.getElementById("branchFilter").value = branchVal;
+        if (dateVal && document.getElementById("dateFilterPreset")) document.getElementById("dateFilterPreset").value = dateVal;
+        if (clockVal && document.getElementById("clockToggle")) document.getElementById("clockToggle").value = clockVal;
     }
 
     setTimeout(() => renderAll(), 50); // delay to let display:block apply fully
@@ -476,8 +489,8 @@ window.handleGlobalClick = function (e) {
 };
 
 window.clearDateFilter = function () {
-    document.getElementById("dateFilterPreset").value = "custom";
-    document.getElementById("customDateInputs").style.display = "flex";
+    document.getElementById("dateFilterPreset").value = "all_time";
+    document.getElementById("customDateInputs").style.display = "none";
     document.getElementById("filterStartDate").value = "";
     document.getElementById("filterEndDate").value = "";
     renderAll();
@@ -498,7 +511,12 @@ window.applyDatePreset = function () {
 
     const now = new Date();
 
-    if (preset === "today") {
+    if (preset === "all_time") {
+        customInputs.style.display = "none";
+        startDate.value = "";
+        endDate.value = "";
+        document.getElementById("dateFilterPreset").value = "all_time";
+    } else if (preset === "today") {
         customInputs.style.display = "none";
         startDate.value = formatDate(now);
         endDate.value = formatDate(now);
@@ -1138,6 +1156,13 @@ window.renderAll = function () {
         dailyBody.innerHTML += `<tr ${selectedId === e.id ? 'class="selected"' : ''} onclick="selectRow(${e.id}, event)"><td>${d}</td>${brCell}<td>${sHT(e.s1s, e.s1e)}</td><td>${sHT(e.s2s, e.s2e)}</td><td style="display:${hasS3 ? '' : 'none'}">${sHT(e.s3s, e.s3e)}</td><td style="display:${hasS4 ? '' : 'none'}">${sHT(e.s4s, e.s4e)}</td><td style="display:${hasS5 ? '' : 'none'}">${sHT(e.s5s, e.s5e)}</td><td>${decToT(e.total)}</td><td>${getCurrencySymbol()}${e.rate}</td><td>${getCurrencySymbol()}${e.pay}</td><td><button class="btn-edit-small" onclick="event.stopPropagation(); editEntry(${e.id})">Edit</button><button class="btn-danger-x" onclick="event.stopPropagation(); deleteEntry(${e.id})">×</button></td></tr>`;
     });
     const filteredEmps = [...new Set(display.map(e => e.name))];
+    filteredEmps.sort((a, b) => summarySortAsc ? a.localeCompare(b) : b.localeCompare(a));
+    const empIcon = document.getElementById("summarySortIcon");
+    if (empIcon) {
+        empIcon.innerText = summarySortAsc ? '▲' : '▼';
+        empIcon.style.color = '#ffc107';
+        empIcon.style.fontSize = '14px';
+    }
     filteredEmps.forEach(n => {
         let ent = display.filter(x => x.name === n); let h = ent.reduce((s, c) => s + c.total, 0), p = ent.reduce((s, c) => s + parseFloat(c.pay), 0);
         if (ent.length > 0) {
@@ -1148,8 +1173,15 @@ window.renderAll = function () {
     const branchSummaryBody = document.querySelector("#branchSummaryTable tbody");
     if (branchSummaryBody) {
         branchSummaryBody.innerHTML = "";
-        const filteredBranches = [...new Set(display.map(e => e.branch))];
-        filteredBranches.forEach(b => {
+        const filterBranchNames = [...new Set(display.filter(d => Boolean(d.branch)).map(e => e.branch))];
+        filterBranchNames.sort((a, b) => branchSortAsc ? a.localeCompare(b) : b.localeCompare(a));
+        const branchIcon = document.getElementById("branchSortIcon");
+        if (branchIcon) {
+            branchIcon.innerText = branchSortAsc ? '▲' : '▼';
+            branchIcon.style.color = '#ffc107';
+            branchIcon.style.fontSize = '14px';
+        }
+        filterBranchNames.forEach(b => {
             let ent = display.filter(x => x.branch === b);
             if (ent.length > 0) {
                 let h = ent.reduce((s, c) => s + c.total, 0), p = ent.reduce((s, c) => s + parseFloat(c.pay), 0);
@@ -1438,7 +1470,7 @@ window.clearAllTablesSecure = function () {
 };
 
 window.exportToExcel = function () {
-    const isAuditActive = document.getElementById('auditView').classList.contains('active');
+    const isAuditActive = document.getElementById('auditView').classList.contains('active') || document.getElementById('auditReportsView').classList.contains('active');
 
     if (isAuditActive) {
         let csv = "Date,Branch,Opening Balance,Closing Balance,Cash Out,Sales Total,Tips,Other Expenses,Closing Balance\n";
@@ -1471,6 +1503,26 @@ window.exportToExcel = function () {
         });
 
         csv += `\n"TOTALS",,"N/A","N/A",${tCashOut.toFixed(2)},${tSales.toFixed(2)},${tTips.toFixed(2)},${tExp.toFixed(2)},${tNet.toFixed(2)}\n`;
+
+        csv += "\nAccumulated Branch Audit Totals\n";
+        csv += "Branch,Opening (Total),Closing (Total),Cash Out (Total),Gross Sales,Total Tips,Total Expenses,Net Final\n";
+
+        const branches = [...new Set(curData.map(d => d.branch))];
+        branches.sort((a, b) => auditBranchSortAsc ? (a || '').localeCompare(b || '') : (b || '').localeCompare(a || ''));
+        branches.forEach(b => {
+            let bR = curData.filter(r => r.branch === b);
+            let tO = 0, tC = 0, tCO = 0, tS = 0, tTipsBranch = 0, tEx = 0, tNetBranch = 0;
+            bR.forEach(r => {
+                const o = parseFloat(r.opening) || 0; tO += o;
+                const c = parseFloat(r.closing) || 0; tC += c;
+                const ex = parseFloat(r.expenses) || 0; tEx += ex;
+                const sTotal = (r.sales || []).reduce((sum, v) => sum + (parseFloat(v) || 0), 0); tS += sTotal;
+                const cout = c - o; tCO += cout;
+                const tips = cout - sTotal; tTipsBranch += tips;
+                const net = c - cout - ex; tNetBranch += net;
+            });
+            csv += `"${b || 'Unassigned'}",${tO.toFixed(2)},${tC.toFixed(2)},${tCO.toFixed(2)},${tS.toFixed(2)},${tTipsBranch.toFixed(2)},${tEx.toFixed(2)},${tNetBranch.toFixed(2)}\n`;
+        });
 
         appSettings.lastBackupDate = Date.now();
         saveSettings();
@@ -2395,7 +2447,7 @@ window.renderAuditData = function () {
 
         const d = a.date.split('-').slice(1).concat(a.date.split('-')[0]).join('-');
 
-        let brCell = appSettings.showBranch ? `<td>${a.branch}</td>` : '<td style="display:none"></td>';
+        let brCell = appSettings.showBranch ? `<td style="text-align: left; padding-left: 15px;">${a.branch}</td>` : '<td style="display:none"></td>';
 
         body.innerHTML += `<tr>
             <td>${d}</td>
@@ -2547,6 +2599,15 @@ window.renderAuditReports = function () {
 
     // Branch Aggregation
     const branches = [...new Set(display.map(d => d.branch))];
+    branches.sort((a, b) => auditBranchSortAsc ? (a || '').localeCompare(b || '') : (b || '').localeCompare(a || ''));
+
+    const abIcon = document.getElementById("auditBranchSortIcon");
+    if (abIcon) {
+        abIcon.innerText = auditBranchSortAsc ? '▲' : '▼';
+        abIcon.style.color = '#ffc107';
+        abIcon.style.fontSize = '14px';
+    }
+
     branches.forEach(b => {
         let bR = display.filter(r => r.branch === b);
         let tO = 0, tC = 0, tCO = 0, tS = 0, tTips = 0, tEx = 0, tNet = 0;
@@ -2562,7 +2623,7 @@ window.renderAuditReports = function () {
         });
 
         tableBody.innerHTML += `<tr>
-            <td>${b || '<i>Unassigned</i>'}</td>
+            <td style="text-align: left; padding-left: 15px;">${b || '<i>Unassigned</i>'}</td>
             <td>${sym}${tO.toFixed(2)}</td>
             <td>${sym}${tC.toFixed(2)}</td>
             <td>${sym}${tCO.toFixed(2)}</td>
@@ -2593,4 +2654,19 @@ window.toggleMainSort = function (col) {
         mainSortAsc = col === 'branch' ? true : false;
     }
     renderAll();
+};
+
+window.toggleSummarySort = function () {
+    summarySortAsc = !summarySortAsc;
+    renderAll();
+};
+
+window.toggleBranchSort = function () {
+    branchSortAsc = !branchSortAsc;
+    renderAll();
+};
+
+window.toggleAuditBranchSort = function () {
+    auditBranchSortAsc = !auditBranchSortAsc;
+    renderAuditReports();
 };

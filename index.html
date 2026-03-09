@@ -203,9 +203,11 @@
                         <label>Date Filter:</label>
                         <select id="dateFilterPreset" onchange="applyDatePreset()"
                             style="width: 150px; padding: 6px; margin-right: 15px;">
+                            <option value="all_time">All Time</option>
                             <option value="today">Today</option>
                             <option value="current_month">Current Month</option>
                             <option value="last_month">Last Month</option>
+                            <option value="custom">Custom Range</option>
                         </select>
                         <div id="customDateInputs" style="display: none; align-items: center;">
                             <label>Start Date:</label>
@@ -422,7 +424,8 @@
                 <table id="summaryTable">
                     <thead>
                         <tr>
-                            <th>Employee</th>
+                            <th style="cursor:pointer;" onclick="toggleSummarySort()">Employee <span
+                                    id="summarySortIcon" style="color:#ffffff; font-size:14px;">▲</span></th>
                             <th>Primary Branch</th>
                             <th>Total Hours</th>
                             <th>Gross Pay</th>
@@ -441,7 +444,8 @@
                 <table id="branchSummaryTable">
                     <thead>
                         <tr>
-                            <th>Branch</th>
+                            <th style="cursor:pointer;" onclick="toggleBranchSort()">Branch <span id="branchSortIcon"
+                                    style="color:#ffffff; font-size:14px;">▲</span></th>
                             <th>Total Hours</th>
                             <th>Total Pay</th>
                             <th>Clear History</th>
@@ -474,7 +478,8 @@
                 <table id="auditBranchSummaryTable">
                     <thead>
                         <tr>
-                            <th>Branch</th>
+                            <th style="cursor:pointer;" onclick="toggleAuditBranchSort()">Branch <span
+                                    id="auditBranchSortIcon" style="color:#ffffff; font-size:14px;">▲</span></th>
                             <th>Opening (Total)</th>
                             <th>Closing (Total)</th>
                             <th>Cash Out (Total)</th>

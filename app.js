@@ -932,13 +932,21 @@ window.importAuditCSV = function () {
                     const salesTotal = parseFloat(cols[5]) || 0;
                     const expenses = parseFloat(cols[7]) || 0;
 
+                    let salesArray = [];
+                    if (cols.length > 9 && cols[9].trim() !== '') {
+                        salesArray = cols[9].split('|').map(s => parseFloat(s)).filter(s => !isNaN(s));
+                    }
+                    if (salesArray.length === 0) {
+                        salesArray = [salesTotal];
+                    }
+
                     const entry = {
                         id: Date.now() + i,
                         date: date,
                         branch: branch,
                         opening: opening,
                         closing: closing,
-                        sales: [salesTotal],
+                        sales: salesArray,
                         expenses: expenses
                     };
 
@@ -1003,8 +1011,14 @@ window.checkExistingAudit = function () {
         document.getElementById("saveAuditBtn").innerText = "Update Audit Record";
     } else {
         if (editingAuditId !== null) {
+            document.getElementById('auditOpening').value = "";
+            document.getElementById('auditClosing').value = "";
+            document.getElementById('auditExpenses').value = "0.00";
+            document.getElementById('sales-container-audit').innerHTML = "";
+            addInputAudit();
             editingAuditId = null;
             document.getElementById("saveAuditBtn").innerText = "Save / Update Audit Record";
+            calcAudit();
         }
     }
 };
@@ -1473,7 +1487,7 @@ window.exportToExcel = function () {
     const isAuditActive = document.getElementById('auditView').classList.contains('active') || document.getElementById('auditReportsView').classList.contains('active');
 
     if (isAuditActive) {
-        let csv = "Date,Branch,Opening Balance,Closing Balance,Cash Out,Sales Total,Tips,Other Expenses,Closing Balance\n";
+        let csv = "Date,Branch,Opening Balance,Closing Balance,Cash Out,Sales Total,Tips,Other Expenses,Net Final,Individual Transactions\n";
         const curBranchFilter = document.getElementById("branchFilter").value;
 
         let curData = auditData.filter(d => {
@@ -1496,16 +1510,17 @@ window.exportToExcel = function () {
             const cout = c - o;
             const tips = cout - sTotal;
             const net = c - cout - ex;
+            const indivSales = (d.sales || []).join("|");
 
             tCashOut += cout; tSales += sTotal; tTips += tips; tExp += ex; tNet += net;
 
-            csv += `"${d.date}","${d.branch || ''}",${o.toFixed(2)},${c.toFixed(2)},${cout.toFixed(2)},${sTotal.toFixed(2)},${tips.toFixed(2)},${ex.toFixed(2)},${net.toFixed(2)}\n`;
+            csv += `"${d.date}","${d.branch || ''}",${o.toFixed(2)},${c.toFixed(2)},${cout.toFixed(2)},${sTotal.toFixed(2)},${tips.toFixed(2)},${ex.toFixed(2)},${net.toFixed(2)},"${indivSales}"\n`;
         });
 
-        csv += `\n"TOTALS",,"N/A","N/A",${tCashOut.toFixed(2)},${tSales.toFixed(2)},${tTips.toFixed(2)},${tExp.toFixed(2)},${tNet.toFixed(2)}\n`;
+        csv += `\n"TOTALS",,"N/A","N/A",${tCashOut.toFixed(2)},${tSales.toFixed(2)},${tTips.toFixed(2)},"N/A","N/A","N/A"\n`;
 
         csv += "\nAccumulated Branch Audit Totals\n";
-        csv += "Branch,Opening (Total),Closing (Total),Cash Out (Total),Gross Sales,Total Tips,Total Expenses,Net Final\n";
+        csv += "Branch,Cash Out (Total),Gross Sales,Total Tips\n";
 
         const branches = [...new Set(curData.map(d => d.branch))];
         branches.sort((a, b) => auditBranchSortAsc ? (a || '').localeCompare(b || '') : (b || '').localeCompare(a || ''));
@@ -1521,7 +1536,7 @@ window.exportToExcel = function () {
                 const tips = cout - sTotal; tTipsBranch += tips;
                 const net = c - cout - ex; tNetBranch += net;
             });
-            csv += `"${b || 'Unassigned'}",${tO.toFixed(2)},${tC.toFixed(2)},${tCO.toFixed(2)},${tS.toFixed(2)},${tTipsBranch.toFixed(2)},${tEx.toFixed(2)},${tNetBranch.toFixed(2)}\n`;
+            csv += `"${b || 'Unassigned'}",${tCO.toFixed(2)},${tS.toFixed(2)},${tTipsBranch.toFixed(2)}\n`;
         });
 
         appSettings.lastBackupDate = Date.now();
@@ -2285,9 +2300,10 @@ function calcAudit() {
     document.querySelectorAll('.sale-in-audit').forEach(el => sales += (parseFloat(el.value) || 0));
     document.getElementById('st-sales').innerHTML = `<span class="currency-label">${sym}</span>${sales.toFixed(2)}`;
 
-    const tips = cashOut - sales;
+    let tips = cashOut - sales;
+    if (Math.abs(tips) < 0.005) tips = 0;
     document.getElementById('st-tips').innerHTML = `<span class="currency-label">${sym}</span>${tips.toFixed(2)}`;
-    document.getElementById('st-tips').style.color = tips < 0 ? "#e74c3c" : "#27ae60";
+    document.getElementById('st-tips').style.color = tips === 0 ? "#777" : (tips < 0 ? "#e74c3c" : "#27ae60");
     document.getElementById('st-final').innerHTML = `<span class="currency-label">${sym}</span>${(close - cashOut - exp).toFixed(2)}`;
 }
 
@@ -2440,7 +2456,8 @@ window.renderAuditData = function () {
         const ex = parseFloat(a.expenses) || 0;
         const sTotal = (a.sales || []).reduce((sum, v) => sum + (parseFloat(v) || 0), 0);
         const cout = c - o;
-        const tips = cout - sTotal;
+        let tips = cout - sTotal;
+        if (Math.abs(tips) < 0.005) tips = 0;
         const net = c - cout - ex;
 
         tCashOut += cout; tSales += sTotal; tTips += tips; tExp += ex; tNet += net;
@@ -2449,6 +2466,8 @@ window.renderAuditData = function () {
 
         let brCell = appSettings.showBranch ? `<td style="text-align: left; padding-left: 15px;">${a.branch}</td>` : '<td style="display:none"></td>';
 
+        let tipsColor = tips === 0 ? '#777' : (tips < 0 ? '#e74c3c' : '#27ae60');
+
         body.innerHTML += `<tr>
             <td>${d}</td>
             ${brCell}
@@ -2456,7 +2475,7 @@ window.renderAuditData = function () {
             <td>${sym}${c.toFixed(2)}</td>
             <td>${sym}${cout.toFixed(2)}</td>
             <td>${sym}${sTotal.toFixed(2)}</td>
-            <td style="font-weight:bold; color:${tips < 0 ? '#e74c3c' : '#27ae60'}">${sym}${tips.toFixed(2)}</td>
+            <td style="font-weight:bold; color:${tipsColor}">${sym}${tips.toFixed(2)}</td>
             <td>${sym}${ex.toFixed(2)}</td>
             <td style="font-weight:bold">${sym}${net.toFixed(2)}</td>
             <td>
@@ -2467,13 +2486,16 @@ window.renderAuditData = function () {
     });
 
     if (display.length > 0) {
+        if (Math.abs(tTips) < 0.005) tTips = 0;
+        let tTipsColor = tTips === 0 ? '#777' : (tTips < 0 ? '#e74c3c' : '#27ae60');
+
         body.innerHTML += `<tr style="background:#eaeff5; font-weight:bold;">
             <td colspan="${appSettings.showBranch ? 4 : 3}" style="text-align:right">Audit Totals:</td>
             <td>${sym}${tCashOut.toFixed(2)}</td>
             <td>${sym}${tSales.toFixed(2)}</td>
-            <td style="color:${tTips < 0 ? '#e74c3c' : '#27ae60'}">${sym}${tTips.toFixed(2)}</td>
-            <td>${sym}${tExp.toFixed(2)}</td>
-            <td>${sym}${tNet.toFixed(2)}</td>
+            <td style="color:${tTipsColor}">${sym}${tTips.toFixed(2)}</td>
+            <td>-</td>
+            <td>-</td>
             <td></td>
         </tr>`;
     }
@@ -2622,15 +2644,14 @@ window.renderAuditReports = function () {
             const net = c - cout - ex; tNet += net;
         });
 
+        if (Math.abs(tTips) < 0.005) tTips = 0;
+        let branchTipsColor = tTips === 0 ? '#777' : (tTips < 0 ? '#e74c3c' : '#27ae60');
+
         tableBody.innerHTML += `<tr>
             <td style="text-align: left; padding-left: 15px;">${b || '<i>Unassigned</i>'}</td>
-            <td>${sym}${tO.toFixed(2)}</td>
-            <td>${sym}${tC.toFixed(2)}</td>
             <td>${sym}${tCO.toFixed(2)}</td>
             <td>${sym}${tS.toFixed(2)}</td>
-            <td style="color:${tTips < 0 ? '#e74c3c' : '#27ae60'}">${sym}${tTips.toFixed(2)}</td>
-            <td>${sym}${tEx.toFixed(2)}</td>
-            <td>${sym}${tNet.toFixed(2)}</td>
+            <td style="color:${branchTipsColor}">${sym}${tTips.toFixed(2)}</td>
             <td><button class="btn-danger-x" onclick="clearAuditBranchHistory('${b}')" title="Clear Branch">×</button></td>
         </tr>`;
     });

@@ -463,10 +463,17 @@
 
             <div class="flex-container" style="margin-top: 20px;">
                 <div class="card clickable-chart" style="flex: 1; cursor: pointer; transition: transform 0.2s;"
-                    id="auditTrendGraphCard" onclick="toggleExpandChart('auditTrendGraphCard')" title="Click to Expand">
-                    <h3 style="text-align: center; margin-top: 0; margin-bottom: 15px;">Tips & Net Flow Trend 🔍</h3>
+                    id="auditSalesGraphCard" onclick="toggleExpandChart('auditSalesGraphCard')" title="Click to Expand">
+                    <h3 style="text-align: center; margin-top: 0; margin-bottom: 15px;">Date vs Gross Sales 🔍</h3>
                     <div class="chart-container">
-                        <canvas id="auditTrendGraph"></canvas>
+                        <canvas id="auditSalesGraph"></canvas>
+                    </div>
+                </div>
+                <div class="card clickable-chart" style="flex: 1; cursor: pointer; transition: transform 0.2s;"
+                    id="auditTipsGraphCard" onclick="toggleExpandChart('auditTipsGraphCard')" title="Click to Expand">
+                    <h3 style="text-align: center; margin-top: 0; margin-bottom: 15px;">Date vs Tips 🔍</h3>
+                    <div class="chart-container">
+                        <canvas id="auditTipsGraph"></canvas>
                     </div>
                 </div>
             </div>
@@ -480,13 +487,9 @@
                         <tr>
                             <th style="cursor:pointer;" onclick="toggleAuditBranchSort()">Branch <span
                                     id="auditBranchSortIcon" style="color:#ffffff; font-size:14px;">▲</span></th>
-                            <th>Opening (Total)</th>
-                            <th>Closing (Total)</th>
                             <th>Cash Out (Total)</th>
                             <th>Gross Sales</th>
                             <th>Total Tips</th>
-                            <th>Total Expenses</th>
-                            <th>Net Final</th>
                             <th>Clear Branch History</th>
                         </tr>
                     </thead>

@@ -223,25 +223,33 @@
                 </div>
             </div>
 
-            <div class="section-header" style="margin-top: 25px; margin-bottom: 5px;">Live Activity Log<span
-                    class="tooltip-icon" style="margin-left: 10px;">i<span class="tooltip-text">View all created shifts
-                        chronologically,
-                        filtered by the global options above.</span></span></div>
-            <div class="col-visibility-toggles"
-                style="font-size:12px; margin-bottom:10px; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; display: flex; gap: 15px; flex-wrap: wrap; align-items:center;">
-                <strong style="color: #ccc;">Show Columns:</strong>
-                <label><input type="checkbox" checked onchange="toggleTableCol('dailyTable', 3, this.checked)"> Shift
-                    1</label>
-                <label><input type="checkbox" checked onchange="toggleTableCol('dailyTable', 4, this.checked)"> Shift
-                    2</label>
-                <label><input type="checkbox" checked onchange="toggleTableCol('dailyTable', 5, this.checked)"> Shift
-                    3</label>
-                <label><input type="checkbox" checked onchange="toggleTableCol('dailyTable', 8, this.checked)">
-                    Hrs</label>
-                <label><input type="checkbox" checked onchange="toggleTableCol('dailyTable', 9, this.checked)">
-                    Rate</label>
-                <label><input type="checkbox" checked onchange="toggleTableCol('dailyTable', 10, this.checked)">
-                    Pay</label>
+            <div
+                style="display: flex; justify-content: space-between; align-items: center; margin-top: 25px; margin-bottom: 10px;">
+                <div class="section-header" style="margin: 0;">Live Activity Log<span class="tooltip-icon"
+                        style="margin-left: 10px;">i<span class="tooltip-text">View all created shifts
+                            chronologically,
+                            filtered by the global options above.</span></span></div>
+                <details style="position: relative;">
+                    <summary
+                        style="cursor: pointer; width: max-content; padding: 6px 12px; background: #3498db; color: #fff; border-radius: 4px; font-size: 12px; font-weight: bold; user-select: none;">
+                        ⚙️ Customize Columns
+                    </summary>
+                    <div
+                        style="position: absolute; top: 100%; right: 0; margin-top: 5px; padding: 12px; background: #2c3e50; border: 1px solid #1abc9c; border-radius: 4px; display: flex; flex-direction: column; gap: 10px; font-size: 13px; box-shadow: 0 4px 8px rgba(0,0,0,0.5); z-index: 100; min-width: 150px;">
+                        <label style="cursor:pointer; display:flex; align-items:center; gap:5px;"><input type="checkbox"
+                                checked onchange="toggleTableCol('dailyTable', 3, this.checked)"> Shift 1</label>
+                        <label style="cursor:pointer; display:flex; align-items:center; gap:5px;"><input type="checkbox"
+                                checked onchange="toggleTableCol('dailyTable', 4, this.checked)"> Shift 2</label>
+                        <label style="cursor:pointer; display:flex; align-items:center; gap:5px;"><input type="checkbox"
+                                checked onchange="toggleTableCol('dailyTable', 5, this.checked)"> Shift 3</label>
+                        <label style="cursor:pointer; display:flex; align-items:center; gap:5px;"><input type="checkbox"
+                                checked onchange="toggleTableCol('dailyTable', 8, this.checked)"> Hrs</label>
+                        <label style="cursor:pointer; display:flex; align-items:center; gap:5px;"><input type="checkbox"
+                                checked onchange="toggleTableCol('dailyTable', 9, this.checked)"> Rate</label>
+                        <label style="cursor:pointer; display:flex; align-items:center; gap:5px;"><input type="checkbox"
+                                checked onchange="toggleTableCol('dailyTable', 10, this.checked)"> Pay</label>
+                    </div>
+                </details>
             </div>
             <table id="dailyTable">
                 <thead>
@@ -385,22 +393,30 @@
             </div>
 
             <div id="auditFiltersContainer"></div>
-            <div class="section-header" style="margin-top: 15px; margin-bottom: 5px;">Live Audit History</div>
-            <div class="col-visibility-toggles"
-                style="font-size:12px; margin-bottom:10px; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; display: flex; gap: 15px; flex-wrap: wrap; align-items:center;">
-                <strong style="color: #ccc;">Show Columns:</strong>
-                <label><input type="checkbox" checked onchange="toggleTableCol('auditDailyTable', 3, this.checked)">
-                    Opening</label>
-                <label><input type="checkbox" checked onchange="toggleTableCol('auditDailyTable', 4, this.checked)">
-                    Closing</label>
-                <label><input type="checkbox" checked onchange="toggleTableCol('auditDailyTable', 5, this.checked)">
-                    Cash Out</label>
-                <label><input type="checkbox" checked onchange="toggleTableCol('auditDailyTable', 6, this.checked)">
-                    Sales</label>
-                <label><input type="checkbox" checked onchange="toggleTableCol('auditDailyTable', 7, this.checked)">
-                    Tips</label>
-                <label><input type="checkbox" checked onchange="toggleTableCol('auditDailyTable', 8, this.checked)">
-                    Other Exp</label>
+            <div
+                style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; margin-bottom: 10px;">
+                <div class="section-header" style="margin: 0;">Live Audit History</div>
+                <details style="position: relative;">
+                    <summary
+                        style="cursor: pointer; width: max-content; padding: 6px 12px; background: #3498db; color: #fff; border-radius: 4px; font-size: 12px; font-weight: bold; user-select: none;">
+                        ⚙️ Customize Columns
+                    </summary>
+                    <div
+                        style="position: absolute; top: 100%; right: 0; margin-top: 5px; padding: 12px; background: #2c3e50; border: 1px solid #1abc9c; border-radius: 4px; display: flex; flex-direction: column; gap: 10px; font-size: 13px; box-shadow: 0 4px 8px rgba(0,0,0,0.5); z-index: 100; min-width: 150px;">
+                        <label style="cursor:pointer; display:flex; align-items:center; gap:5px;"><input type="checkbox"
+                                checked onchange="toggleTableCol('auditDailyTable', 3, this.checked)"> Opening</label>
+                        <label style="cursor:pointer; display:flex; align-items:center; gap:5px;"><input type="checkbox"
+                                checked onchange="toggleTableCol('auditDailyTable', 4, this.checked)"> Closing</label>
+                        <label style="cursor:pointer; display:flex; align-items:center; gap:5px;"><input type="checkbox"
+                                checked onchange="toggleTableCol('auditDailyTable', 5, this.checked)"> Cash Out</label>
+                        <label style="cursor:pointer; display:flex; align-items:center; gap:5px;"><input type="checkbox"
+                                checked onchange="toggleTableCol('auditDailyTable', 6, this.checked)"> Sales</label>
+                        <label style="cursor:pointer; display:flex; align-items:center; gap:5px;"><input type="checkbox"
+                                checked onchange="toggleTableCol('auditDailyTable', 7, this.checked)"> Tips</label>
+                        <label style="cursor:pointer; display:flex; align-items:center; gap:5px;"><input type="checkbox"
+                                checked onchange="toggleTableCol('auditDailyTable', 8, this.checked)"> Other Exp</label>
+                    </div>
+                </details>
             </div>
             <table id="auditDailyTable">
                 <thead>

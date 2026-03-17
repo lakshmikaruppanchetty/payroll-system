@@ -235,19 +235,31 @@
                         ⚙️ Customize Columns
                     </summary>
                     <div
-                        style="position: absolute; top: 100%; right: 0; margin-top: 5px; padding: 12px; background: #2c3e50; border: 1px solid #1abc9c; border-radius: 4px; display: flex; flex-direction: column; gap: 10px; font-size: 13px; box-shadow: 0 4px 8px rgba(0,0,0,0.5); z-index: 100; min-width: 150px;">
-                        <label style="cursor:pointer; display:flex; align-items:center; gap:5px;"><input type="checkbox"
-                                checked onchange="toggleTableCol('dailyTable', 3, this.checked)"> Shift 1</label>
-                        <label style="cursor:pointer; display:flex; align-items:center; gap:5px;"><input type="checkbox"
-                                checked onchange="toggleTableCol('dailyTable', 4, this.checked)"> Shift 2</label>
-                        <label style="cursor:pointer; display:flex; align-items:center; gap:5px;"><input type="checkbox"
-                                checked onchange="toggleTableCol('dailyTable', 5, this.checked)"> Shift 3</label>
-                        <label style="cursor:pointer; display:flex; align-items:center; gap:5px;"><input type="checkbox"
-                                checked onchange="toggleTableCol('dailyTable', 8, this.checked)"> Hrs</label>
-                        <label style="cursor:pointer; display:flex; align-items:center; gap:5px;"><input type="checkbox"
-                                checked onchange="toggleTableCol('dailyTable', 9, this.checked)"> Rate</label>
-                        <label style="cursor:pointer; display:flex; align-items:center; gap:5px;"><input type="checkbox"
-                                checked onchange="toggleTableCol('dailyTable', 10, this.checked)"> Pay</label>
+                        style="position: absolute; top: 100%; right: 0; margin-top: 5px; padding: 12px; background: #2c3e50; border: 1px solid #1abc9c; border-radius: 4px; display: flex; flex-direction: column; gap: 10px; font-size: 13px; box-shadow: 0 4px 12px rgba(0,0,0,0.8); z-index: 9999; min-width: 150px;">
+                        <label
+                            style="cursor:pointer; display:flex; justify-content:space-between; align-items:center;"><span>Shift
+                                1</span> <input type="checkbox" checked
+                                onchange="toggleTableCol('dailyTable', 3, this.checked)"></label>
+                        <label
+                            style="cursor:pointer; display:flex; justify-content:space-between; align-items:center;"><span>Shift
+                                2</span> <input type="checkbox" checked
+                                onchange="toggleTableCol('dailyTable', 4, this.checked)"></label>
+                        <label
+                            style="cursor:pointer; display:flex; justify-content:space-between; align-items:center;"><span>Shift
+                                3</span> <input type="checkbox" checked
+                                onchange="toggleTableCol('dailyTable', 5, this.checked)"></label>
+                        <label
+                            style="cursor:pointer; display:flex; justify-content:space-between; align-items:center;"><span>Hrs</span>
+                            <input type="checkbox" checked
+                                onchange="toggleTableCol('dailyTable', 8, this.checked)"></label>
+                        <label
+                            style="cursor:pointer; display:flex; justify-content:space-between; align-items:center;"><span>Rate</span>
+                            <input type="checkbox" checked
+                                onchange="toggleTableCol('dailyTable', 9, this.checked)"></label>
+                        <label
+                            style="cursor:pointer; display:flex; justify-content:space-between; align-items:center;"><span>Pay</span>
+                            <input type="checkbox" checked
+                                onchange="toggleTableCol('dailyTable', 10, this.checked)"></label>
                     </div>
                 </details>
             </div>
@@ -402,19 +414,31 @@
                         ⚙️ Customize Columns
                     </summary>
                     <div
-                        style="position: absolute; top: 100%; right: 0; margin-top: 5px; padding: 12px; background: #2c3e50; border: 1px solid #1abc9c; border-radius: 4px; display: flex; flex-direction: column; gap: 10px; font-size: 13px; box-shadow: 0 4px 8px rgba(0,0,0,0.5); z-index: 100; min-width: 150px;">
-                        <label style="cursor:pointer; display:flex; align-items:center; gap:5px;"><input type="checkbox"
-                                checked onchange="toggleTableCol('auditDailyTable', 3, this.checked)"> Opening</label>
-                        <label style="cursor:pointer; display:flex; align-items:center; gap:5px;"><input type="checkbox"
-                                checked onchange="toggleTableCol('auditDailyTable', 4, this.checked)"> Closing</label>
-                        <label style="cursor:pointer; display:flex; align-items:center; gap:5px;"><input type="checkbox"
-                                checked onchange="toggleTableCol('auditDailyTable', 5, this.checked)"> Cash Out</label>
-                        <label style="cursor:pointer; display:flex; align-items:center; gap:5px;"><input type="checkbox"
-                                checked onchange="toggleTableCol('auditDailyTable', 6, this.checked)"> Sales</label>
-                        <label style="cursor:pointer; display:flex; align-items:center; gap:5px;"><input type="checkbox"
-                                checked onchange="toggleTableCol('auditDailyTable', 7, this.checked)"> Tips</label>
-                        <label style="cursor:pointer; display:flex; align-items:center; gap:5px;"><input type="checkbox"
-                                checked onchange="toggleTableCol('auditDailyTable', 8, this.checked)"> Other Exp</label>
+                        style="position: absolute; top: 100%; right: 0; margin-top: 5px; padding: 12px; background: #2c3e50; border: 1px solid #1abc9c; border-radius: 4px; display: flex; flex-direction: column; gap: 10px; font-size: 13px; box-shadow: 0 4px 12px rgba(0,0,0,0.8); z-index: 9999; min-width: 150px;">
+                        <label
+                            style="cursor:pointer; display:flex; justify-content:space-between; align-items:center;"><span>Opening</span>
+                            <input type="checkbox" checked
+                                onchange="toggleTableCol('auditDailyTable', 3, this.checked)"></label>
+                        <label
+                            style="cursor:pointer; display:flex; justify-content:space-between; align-items:center;"><span>Closing</span>
+                            <input type="checkbox" checked
+                                onchange="toggleTableCol('auditDailyTable', 4, this.checked)"></label>
+                        <label
+                            style="cursor:pointer; display:flex; justify-content:space-between; align-items:center;"><span>Cash
+                                Out</span> <input type="checkbox" checked
+                                onchange="toggleTableCol('auditDailyTable', 5, this.checked)"></label>
+                        <label
+                            style="cursor:pointer; display:flex; justify-content:space-between; align-items:center;"><span>Sales</span>
+                            <input type="checkbox" checked
+                                onchange="toggleTableCol('auditDailyTable', 6, this.checked)"></label>
+                        <label
+                            style="cursor:pointer; display:flex; justify-content:space-between; align-items:center;"><span>Tips</span>
+                            <input type="checkbox" checked
+                                onchange="toggleTableCol('auditDailyTable', 7, this.checked)"></label>
+                        <label
+                            style="cursor:pointer; display:flex; justify-content:space-between; align-items:center;"><span>Other
+                                Exp</span> <input type="checkbox" checked
+                                onchange="toggleTableCol('auditDailyTable', 8, this.checked)"></label>
                     </div>
                 </details>
             </div>

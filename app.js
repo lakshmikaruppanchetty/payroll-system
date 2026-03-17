@@ -542,6 +542,17 @@ window.selectRow = function (id, event) {
     event.stopPropagation(); selectedId = id; renderAll();
     const btn = document.getElementById("floatingDupBtn");
     btn.style.display = "block"; btn.style.left = (event.pageX + 10) + "px"; btn.style.top = (event.pageY - 20) + "px";
+
+    if (window.loadImage) {
+        window.loadImage(id).then(img => {
+            const preview = document.getElementById("preview-img");
+            const hint = document.getElementById("hint");
+            if (img && preview) {
+                preview.src = img; preview.style.display = "block";
+                if (hint) hint.style.display = "none";
+            }
+        });
+    }
 };
 
 window.duplicateSelected = function (event) {
@@ -607,6 +618,11 @@ window.addEntry = function () {
     };
     if (editingId) masterData = masterData.filter(e => e.id !== editingId);
     masterData.push(entry); localStorage.setItem("payroll_v20", JSON.stringify(masterData));
+
+    let img = document.getElementById("preview-img");
+    if (img && img.style.display !== "none" && img.src && window.saveImage) {
+        window.saveImage(entry.id, img.src);
+    }
 
     // Automatically ensure the newly saved entry is visible in the current filter bounds
     let sD = document.getElementById("filterStartDate").value;
@@ -1485,10 +1501,12 @@ window.clearAllTablesSecure = function () {
 
 window.exportToExcel = function () {
     const isAuditActive = document.getElementById('auditView').classList.contains('active') || document.getElementById('auditReportsView').classList.contains('active');
+    const fmtD = (dt) => dt && dt.includes('-') ? `${dt.split('-')[1]}-${dt.split('-')[2]}-${dt.split('-')[0]}` : dt;
 
     if (isAuditActive) {
         let csv = "Date,Branch,Opening Balance,Closing Balance,Cash Out,Sales Total,Tips,Other Expenses,Net Final,Individual Transactions\n";
         const curBranchFilter = document.getElementById("branchFilter").value;
+        const fmtD = (dt) => dt && dt.includes('-') ? `${dt.split('-')[1]}-${dt.split('-')[2]}-${dt.split('-')[0]}` : dt;
 
         let curData = auditData.filter(d => {
             let ok = true;
@@ -1514,7 +1532,7 @@ window.exportToExcel = function () {
 
             tCashOut += cout; tSales += sTotal; tTips += tips; tExp += ex; tNet += net;
 
-            csv += `"${d.date}","${d.branch || ''}",${o.toFixed(2)},${c.toFixed(2)},${cout.toFixed(2)},${sTotal.toFixed(2)},${tips.toFixed(2)},${ex.toFixed(2)},${net.toFixed(2)},"${indivSales}"\n`;
+            csv += `"${fmtD(d.date)}","${d.branch || ''}",${o.toFixed(2)},${c.toFixed(2)},${cout.toFixed(2)},${sTotal.toFixed(2)},${tips.toFixed(2)},${ex.toFixed(2)},${net.toFixed(2)},"${indivSales}"\n`;
         });
 
         csv += `\n"TOTALS",,"N/A","N/A",${tCashOut.toFixed(2)},${tSales.toFixed(2)},${tTips.toFixed(2)},"N/A","N/A","N/A"\n`;
@@ -1566,9 +1584,9 @@ window.exportToExcel = function () {
 
         curData.forEach(d => {
             if (showExt) {
-                csv += `"${d.date}","${d.name}","${d.branch}","${d.s1s}-${d.s1e}","${d.s2s}-${d.s2e}","${d.s3s}-${d.s3e}","${d.s4s || ''}-${d.s4e || ''}","${d.s5s || ''}-${d.s5e || ''}",${decToT(d.total)},${d.rate},${d.pay}\n`;
+                csv += `"${fmtD(d.date)}","${d.name}","${d.branch}","${d.s1s}-${d.s1e}","${d.s2s}-${d.s2e}","${d.s3s}-${d.s3e}","${d.s4s || ''}-${d.s4e || ''}","${d.s5s || ''}-${d.s5e || ''}",${decToT(d.total)},${d.rate},${d.pay}\n`;
             } else {
-                csv += `"${d.date}","${d.name}","${d.branch}","${d.s1s}-${d.s1e}","${d.s2s}-${d.s2e}","${d.s3s}-${d.s3e}",${decToT(d.total)},${d.rate},${d.pay}\n`;
+                csv += `"${fmtD(d.date)}","${d.name}","${d.branch}","${d.s1s}-${d.s1e}","${d.s2s}-${d.s2e}","${d.s3s}-${d.s3e}",${decToT(d.total)},${d.rate},${d.pay}\n`;
             }
         });
 
@@ -1894,6 +1912,7 @@ async function runOCR(canvas) {
         let parsed = parseTimesAndDate(rawText);
         if (parsed.times.length >= 2 || parsed.dateStr) {
             applyAutofill(parsed.times, parsed.dateStr);
+            if (result.data.words) window.drawOcrHighlights('preprocessed-preview', result.data.words);
         } else {
             alert("Could not detect clear shift timings from the document. Please enter manually.");
         }
@@ -2113,9 +2132,10 @@ document.getElementById('uploadAudit').addEventListener('change', function (e) {
                                 status.innerText = `⏳ Processing Punch Data... ${Math.round(m.progress * 100)}%`;
                             }
                         }
-                    }).then(({ data: { text } }) => {
+                    }).then(({ data: { text, words } }) => {
                         status.innerText = "✅ Scan Complete. Verify values below.";
                         processTextAudit(text);
+                        if (words) window.drawOcrHighlights('preprocessed-preview-audit', words);
                     }).catch((err) => {
                         console.error("Tesseract Error", err);
                         status.innerText = "❌ Scan failed. Use viewer to enter manually.";
@@ -2356,6 +2376,11 @@ window.saveAuditEntry = function () {
         auditData.push(entry);
     }
 
+    let img = document.getElementById("preview-img-audit");
+    if (img && img.style.display === "block" && img.src && window.saveImage) {
+        window.saveImage(entry.id, img.src);
+    }
+
     localStorage.setItem("auditData_v20", JSON.stringify(auditData));
     resetAuditForm();
     renderAll();
@@ -2392,6 +2417,17 @@ window.editAuditEntry = function (id) {
     calcAudit();
     document.getElementById('saveAuditBtn').innerText = "Update Audit Record";
     window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    if (window.loadImage) {
+        window.loadImage(id).then(img => {
+            const preview = document.getElementById("preview-img-audit");
+            const hint = document.getElementById("hintAudit");
+            if (img && preview) {
+                preview.src = img; preview.style.display = "block";
+                if (hint) hint.style.display = "none";
+            }
+        });
+    }
 };
 
 window.renderAuditData = function () {
@@ -2489,7 +2525,7 @@ window.renderAuditData = function () {
         if (Math.abs(tTips) < 0.005) tTips = 0;
         let tTipsColor = tTips === 0 ? '#777' : (tTips < 0 ? '#e74c3c' : '#27ae60');
 
-        body.innerHTML += `<tr style="background:#eaeff5; font-weight:bold;">
+        body.innerHTML += `<tr class="totals-row" style="background:#eaeff5; font-weight:bold;">
             <td colspan="${appSettings.showBranch ? 4 : 3}" style="text-align:right">Audit Totals:</td>
             <td>${sym}${tCashOut.toFixed(2)}</td>
             <td>${sym}${tSales.toFixed(2)}</td>
@@ -2690,4 +2726,47 @@ window.toggleBranchSort = function () {
 window.toggleAuditBranchSort = function () {
     auditBranchSortAsc = !auditBranchSortAsc;
     renderAuditReports();
+};
+
+window.drawOcrHighlights = function (canvasId, words) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas || !words) return;
+    const ctx = canvas.getContext('2d');
+    ctx.strokeStyle = 'rgba(46, 204, 113, 0.8)';
+    ctx.lineWidth = 2;
+    ctx.fillStyle = 'rgba(46, 204, 113, 0.2)';
+    words.forEach(w => {
+        const b = w.bbox;
+        ctx.strokeRect(b.x0, b.y0, b.x1 - b.x0, b.y1 - b.y0);
+        ctx.fillRect(b.x0, b.y0, b.x1 - b.x0, b.y1 - b.y0);
+    });
+};
+
+window.toggleTableCol = function (tableId, nTh, show) {
+    let style = document.getElementById(`col-style-${tableId}-${nTh}`);
+    if (!style) {
+        style = document.createElement("style");
+        style.id = `col-style-${tableId}-${nTh}`;
+        document.head.appendChild(style);
+    }
+    style.innerHTML = show ? "" : `#${tableId} tr:not(.totals-row) td:nth-child(${nTh}), #${tableId} tr:not(.totals-row) th:nth-child(${nTh}) { display: none !important; }`;
+};
+
+const DB_NAME = "PayrollImagesDB";
+const STORE_NAME = "images";
+function getDB() {
+    return new Promise((res, rej) => {
+        let req = window.indexedDB.open(DB_NAME, 1);
+        req.onupgradeneeded = e => { if (!e.target.result.objectStoreNames.contains(STORE_NAME)) e.target.result.createObjectStore(STORE_NAME); };
+        req.onsuccess = e => res(e.target.result);
+        req.onerror = e => rej(e.target.error);
+    });
+}
+window.saveImage = async function (id, dataUrl) {
+    try { let db = await getDB(); db.transaction(STORE_NAME, "readwrite").objectStore(STORE_NAME).put(dataUrl, id); } catch (e) { }
+};
+window.loadImage = async function (id) {
+    return new Promise(async res => {
+        try { let db = await getDB(); let req = db.transaction(STORE_NAME, "readonly").objectStore(STORE_NAME).get(id); req.onsuccess = () => res(req.result); req.onerror = () => res(null); } catch (e) { res(null); }
+    });
 };

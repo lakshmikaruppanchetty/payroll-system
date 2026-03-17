@@ -223,9 +223,26 @@
                 </div>
             </div>
 
-            <div class="section-header" style="margin-top: 25px;">Live Activity Log<span class="tooltip-icon"
-                    style="margin-left: 10px;">i<span class="tooltip-text">View all created shifts chronologically,
+            <div class="section-header" style="margin-top: 25px; margin-bottom: 5px;">Live Activity Log<span
+                    class="tooltip-icon" style="margin-left: 10px;">i<span class="tooltip-text">View all created shifts
+                        chronologically,
                         filtered by the global options above.</span></span></div>
+            <div class="col-visibility-toggles"
+                style="font-size:12px; margin-bottom:10px; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; display: flex; gap: 15px; flex-wrap: wrap; align-items:center;">
+                <strong style="color: #ccc;">Show Columns:</strong>
+                <label><input type="checkbox" checked onchange="toggleTableCol('dailyTable', 3, this.checked)"> Shift
+                    1</label>
+                <label><input type="checkbox" checked onchange="toggleTableCol('dailyTable', 4, this.checked)"> Shift
+                    2</label>
+                <label><input type="checkbox" checked onchange="toggleTableCol('dailyTable', 5, this.checked)"> Shift
+                    3</label>
+                <label><input type="checkbox" checked onchange="toggleTableCol('dailyTable', 8, this.checked)">
+                    Hrs</label>
+                <label><input type="checkbox" checked onchange="toggleTableCol('dailyTable', 9, this.checked)">
+                    Rate</label>
+                <label><input type="checkbox" checked onchange="toggleTableCol('dailyTable', 10, this.checked)">
+                    Pay</label>
+            </div>
             <table id="dailyTable">
                 <thead>
                     <tr>
@@ -368,7 +385,23 @@
             </div>
 
             <div id="auditFiltersContainer"></div>
-            <div class="section-header" style="margin-top: 15px;">Live Audit History</div>
+            <div class="section-header" style="margin-top: 15px; margin-bottom: 5px;">Live Audit History</div>
+            <div class="col-visibility-toggles"
+                style="font-size:12px; margin-bottom:10px; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; display: flex; gap: 15px; flex-wrap: wrap; align-items:center;">
+                <strong style="color: #ccc;">Show Columns:</strong>
+                <label><input type="checkbox" checked onchange="toggleTableCol('auditDailyTable', 3, this.checked)">
+                    Opening</label>
+                <label><input type="checkbox" checked onchange="toggleTableCol('auditDailyTable', 4, this.checked)">
+                    Closing</label>
+                <label><input type="checkbox" checked onchange="toggleTableCol('auditDailyTable', 5, this.checked)">
+                    Cash Out</label>
+                <label><input type="checkbox" checked onchange="toggleTableCol('auditDailyTable', 6, this.checked)">
+                    Sales</label>
+                <label><input type="checkbox" checked onchange="toggleTableCol('auditDailyTable', 7, this.checked)">
+                    Tips</label>
+                <label><input type="checkbox" checked onchange="toggleTableCol('auditDailyTable', 8, this.checked)">
+                    Other Exp</label>
+            </div>
             <table id="auditDailyTable">
                 <thead>
                     <tr>

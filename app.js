@@ -644,342 +644,365 @@ window.addEntry = function () {
     editingId = null; resetShifts(); renderAll(); if (typeof checkPendingAI === 'function') checkPendingAI();
 };
 
+function sharedCSVRoute(rawText) {
+    if (!rawText) return;
+    const headLine = rawText.split('\n')[0].toLowerCase();
+
+    if (headLine.includes('opening') || headLine.includes('cash out') || headLine.includes('sales')) {
+        let activeTab = document.querySelector('.sidebar-item.active');
+        if (activeTab && !activeTab.innerText.includes('Cash')) {
+            alert("Audit CSV detected! Automatically importing to Cash & Tips...");
+            if (document.getElementById('navAudit')) document.getElementById('navAudit').click();
+        }
+        window.processAuditCSV(rawText);
+    } else {
+        let activeTab = document.querySelector('.sidebar-item.active');
+        if (activeTab && activeTab.innerText.includes('Cash')) {
+            alert("Payroll CSV detected! Automatically importing to Payroll Management...");
+            if (document.getElementById('navPayroll')) document.getElementById('navPayroll').click();
+        }
+        window.processPayrollCSV(rawText);
+    }
+}
+
 window.importCSV = function () {
     const fileInput = document.getElementById('csvImport'); if (!fileInput.files[0]) return;
     const reader = new FileReader();
-    reader.onload = function (e) {
-        try {
-            const rawText = e.target.result;
-            const rows = [];
-            let inQ = false;
-            let currentLine = "";
-            for (let i = 0; i < rawText.length; i++) {
-                const char = rawText[i];
-                if (char === '"') inQ = !inQ;
+    reader.onload = function (e) { sharedCSVRoute(e.target.result); fileInput.value = ''; };
+    reader.readAsText(fileInput.files[0]);
+};
 
-                if (char === '\n' && !inQ) {
-                    if (currentLine.trim()) rows.push(currentLine);
-                    currentLine = "";
-                } else if (char === '\r' && !inQ) {
-                    if (rawText[i + 1] === '\n') i++;
-                    if (currentLine.trim()) rows.push(currentLine);
-                    currentLine = "";
-                } else {
-                    currentLine += char;
-                }
+window.processPayrollCSV = function (rawText) {
+    try {
+        const rows = [];
+        let inQ = false;
+        let currentLine = "";
+        for (let i = 0; i < rawText.length; i++) {
+            const char = rawText[i];
+            if (char === '"') inQ = !inQ;
+
+            if (char === '\n' && !inQ) {
+                if (currentLine.trim()) rows.push(currentLine);
+                currentLine = "";
+            } else if (char === '\r' && !inQ) {
+                if (rawText[i + 1] === '\n') i++;
+                if (currentLine.trim()) rows.push(currentLine);
+                currentLine = "";
+            } else {
+                currentLine += char;
             }
-            if (currentLine.trim()) rows.push(currentLine);
-            let aC = 0, uC = 0;
+        }
+        if (currentLine.trim()) rows.push(currentLine);
+        let aC = 0, uC = 0;
 
-            let isNewFormat = false;
-            let mapIdx = null;
-            if (rows.length > 0) {
-                const headStr = rows[0].replace(/"/g, '').trim().toLowerCase();
-                if (headStr.includes('date') || headStr.includes('employee')) {
+        let isNewFormat = false;
+        let mapIdx = null;
+        if (rows.length > 0) {
+            const headStr = rows[0].replace(/"/g, '').trim().toLowerCase();
+            if (headStr.includes('date') || headStr.includes('employee')) {
+                isNewFormat = true;
+                mapIdx = { s4: -1, s5: -1, rate: -1 };
+                let hCols = rows[0].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(v => v.replace(/"/g, '').trim().toLowerCase());
+                mapIdx.date = hCols.findIndex(h => h.includes('date'));
+                mapIdx.name = hCols.findIndex(h => h.includes('employee') || h.includes('name'));
+                mapIdx.branch = hCols.findIndex(h => h.includes('branch'));
+                mapIdx.s1 = hCols.findIndex(h => h.includes('shift 1') || h.includes('s1') || h.includes('shift1'));
+                mapIdx.s2 = hCols.findIndex(h => h.includes('shift 2') || h.includes('s2') || h.includes('shift2'));
+                mapIdx.s3 = hCols.findIndex(h => h.includes('shift 3') || h.includes('s3') || h.includes('shift3'));
+                mapIdx.s4 = hCols.findIndex(h => h.includes('shift 4') || h.includes('s4') || h.includes('shift4'));
+                mapIdx.s5 = hCols.findIndex(h => h.includes('shift 5') || h.includes('s5') || h.includes('shift5'));
+                mapIdx.rate = hCols.findIndex(h => h.includes('rate'));
+            } else if (rows.length > 1) {
+                const firstDataCols = rows[1].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                if (firstDataCols[0] && firstDataCols[0].replace(/"/g, '').trim().includes('-') && firstDataCols[0].replace(/"/g, '').trim().length === 10) {
                     isNewFormat = true;
-                    mapIdx = { s4: -1, s5: -1, rate: -1 };
-                    let hCols = rows[0].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(v => v.replace(/"/g, '').trim().toLowerCase());
-                    mapIdx.date = hCols.findIndex(h => h.includes('date'));
-                    mapIdx.name = hCols.findIndex(h => h.includes('employee') || h.includes('name'));
-                    mapIdx.branch = hCols.findIndex(h => h.includes('branch'));
-                    mapIdx.s1 = hCols.findIndex(h => h.includes('shift 1') || h.includes('s1') || h.includes('shift1'));
-                    mapIdx.s2 = hCols.findIndex(h => h.includes('shift 2') || h.includes('s2') || h.includes('shift2'));
-                    mapIdx.s3 = hCols.findIndex(h => h.includes('shift 3') || h.includes('s3') || h.includes('shift3'));
-                    mapIdx.s4 = hCols.findIndex(h => h.includes('shift 4') || h.includes('s4') || h.includes('shift4'));
-                    mapIdx.s5 = hCols.findIndex(h => h.includes('shift 5') || h.includes('s5') || h.includes('shift5'));
-                    mapIdx.rate = hCols.findIndex(h => h.includes('rate'));
-                } else if (rows.length > 1) {
-                    const firstDataCols = rows[1].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-                    if (firstDataCols[0] && firstDataCols[0].replace(/"/g, '').trim().includes('-') && firstDataCols[0].replace(/"/g, '').trim().length === 10) {
-                        isNewFormat = true;
-                    }
                 }
             }
+        }
 
-            let askMerge = null;
+        let askMerge = null;
 
-            for (let i = 1; i < rows.length; i++) {
-                if (rows[i].includes("Summary Data")) break;
-                if (rows[i].includes("Employee,Branch,")) continue;
+        for (let i = 1; i < rows.length; i++) {
+            if (rows[i].includes("Summary Data")) break;
+            if (rows[i].includes("Employee,Branch,")) continue;
 
-                const cols = [];
-                let inQuotes = false, current = "";
-                for (let j = 0; j < rows[i].length; j++) {
-                    const char = rows[i][j];
-                    if (char === '"') inQuotes = !inQuotes;
-                    else if (char === ',' && !inQuotes) { cols.push(current); current = ""; }
-                    else current += char;
+            const cols = [];
+            let inQuotes = false, current = "";
+            for (let j = 0; j < rows[i].length; j++) {
+                const char = rows[i][j];
+                if (char === '"') inQuotes = !inQuotes;
+                else if (char === ',' && !inQuotes) { cols.push(current); current = ""; }
+                else current += char;
+            }
+            cols.push(current);
+            if (cols.length < 3) continue;
+            const clean = (v) => v ? v.replace(/"/g, '').trim() : "";
+
+            function formatDate(str_val) {
+                if (!str_val) return "";
+                let p;
+                if (str_val.includes('/')) p = str_val.split('/');
+                else if (str_val.includes('-')) p = str_val.split('-');
+                else return str_val;
+                if (p.length !== 3) return str_val;
+
+                let y = parseInt(p[2], 10);
+                if (y < 100) y += 2000;
+
+                // Assumes M/D/Y or M-D-Y format generally in USA, but if it looks like Y-M-D it leaves it.
+                if (str_val.includes('-') && p[0].length === 4) {
+                    return `${p[0]}-${p[1].padStart(2, '0')}-${p[2].padStart(2, '0')}`;
                 }
-                cols.push(current);
-                if (cols.length < 3) continue;
-                const clean = (v) => v ? v.replace(/"/g, '').trim() : "";
+                return `${y.toString()}-${p[0].padStart(2, '0')}-${p[1].padStart(2, '0')}`;
+            }
 
-                function formatDate(str_val) {
-                    if (!str_val) return "";
-                    let p;
-                    if (str_val.includes('/')) p = str_val.split('/');
-                    else if (str_val.includes('-')) p = str_val.split('-');
-                    else return str_val;
-                    if (p.length !== 3) return str_val;
+            function timeTo24(str_val) {
+                if (!str_val || str_val.length < 3) return str_val;
+                let up = str_val.toUpperCase();
+                if (!up.includes('AM') && !up.includes('PM')) {
+                    let cleanStr = str_val.replace(/[^0-9:]/g, '');
+                    return cleanStr.length > 0 ? cleanStr : str_val;
+                }
+                let parts = str_val.replace(/[^0-9:]/g, '').split(':');
+                if (parts.length !== 2) return str_val;
+                let h1 = parseInt(parts[0], 10);
+                let m1 = parseInt(parts[1], 10);
+                if (up.includes('PM') && h1 !== 12) h1 += 12;
+                if (up.includes('AM') && h1 === 12) h1 = 0;
+                return [h1.toString().padStart(2, '0'), m1.toString().padStart(2, '0')].join(':');
+            }
 
-                    let y = parseInt(p[2], 10);
-                    if (y < 100) y += 2000;
+            const extractShift = (val) => {
+                let v = clean(val);
+                if (!v || v === '-') return ["", ""];
+                v = v.replace(/\n|\r/g, ' '); // simple collapse as fallback natively
+                let match = v.match(/^(.*?)\s*-\s*(.*)$/);
+                if (!match) match = v.match(/^(.*?)\s*to\s*(.*)$/);
+                if (match) return [timeTo24(match[1].trim()), timeTo24(match[2].trim())];
+                let parts = v.split('-');
+                if (parts.length === 1) return [timeTo24(parts[0].trim()), ""];
+                return [timeTo24(parts[0].trim()), timeTo24(parts[1].trim())];
+            };
 
-                    // Assumes M/D/Y or M-D-Y format generally in USA, but if it looks like Y-M-D it leaves it.
-                    if (str_val.includes('-') && p[0].length === 4) {
-                        return `${p[0]}-${p[1].padStart(2, '0')}-${p[2].padStart(2, '0')}`;
+            const extractMultipleShifts = (val) => {
+                let v = clean(val);
+                if (!v || v === '-') return [];
+                let shifts = v.split(/[\n,;]+/);
+                let res = [];
+                shifts.forEach(s => {
+                    let ss = s.trim();
+                    if (!ss || ss === '-') return;
+                    let m = ss.match(/(.*?)\s*-\s*(.*)/);
+                    if (!m) m = ss.match(/(.*?)\s*to\s*(.*)/);
+                    if (m) res.push([timeTo24(m[1].trim()), timeTo24(m[2].trim())]);
+                    else {
+                        let p = ss.split('-');
+                        if (p.length === 1) res.push([timeTo24(p[0].trim()), ""]);
+                        else res.push([timeTo24(p[0].trim()), timeTo24(p[1].trim())]);
                     }
-                    return `${y.toString()}-${p[0].padStart(2, '0')}-${p[1].padStart(2, '0')}`;
-                }
+                });
+                return res.filter(r => r[0] || r[1]);
+            };
 
-                function timeTo24(str_val) {
-                    if (!str_val || str_val.length < 3) return str_val;
-                    let up = str_val.toUpperCase();
-                    if (!up.includes('AM') && !up.includes('PM')) {
-                        let cleanStr = str_val.replace(/[^0-9:]/g, '');
-                        return cleanStr.length > 0 ? cleanStr : str_val;
-                    }
-                    let parts = str_val.replace(/[^0-9:]/g, '').split(':');
-                    if (parts.length !== 2) return str_val;
-                    let h1 = parseInt(parts[0], 10);
-                    let m1 = parseInt(parts[1], 10);
-                    if (up.includes('PM') && h1 !== 12) h1 += 12;
-                    if (up.includes('AM') && h1 === 12) h1 = 0;
-                    return [h1.toString().padStart(2, '0'), m1.toString().padStart(2, '0')].join(':');
-                }
+            let name, rate, date, branch, s1, s2, s3, s4 = [""], s5 = [""];
+            if (isNewFormat) {
+                if (mapIdx && mapIdx.date > -1) {
+                    date = formatDate(clean(cols[mapIdx.date]));
+                    name = mapIdx.name > -1 ? clean(cols[mapIdx.name]) : clean(cols[1]);
+                    branch = mapIdx.branch > -1 ? clean(cols[mapIdx.branch]) : (clean(cols[2]) || "Branch A");
 
-                const extractShift = (val) => {
-                    let v = clean(val);
-                    if (!v || v === '-') return ["", ""];
-                    v = v.replace(/\n|\r/g, ' '); // simple collapse as fallback natively
-                    let match = v.match(/^(.*?)\s*-\s*(.*)$/);
-                    if (!match) match = v.match(/^(.*?)\s*to\s*(.*)$/);
-                    if (match) return [timeTo24(match[1].trim()), timeTo24(match[2].trim())];
-                    let parts = v.split('-');
-                    if (parts.length === 1) return [timeTo24(parts[0].trim()), ""];
-                    return [timeTo24(parts[0].trim()), timeTo24(parts[1].trim())];
-                };
-
-                const extractMultipleShifts = (val) => {
-                    let v = clean(val);
-                    if (!v || v === '-') return [];
-                    let shifts = v.split(/[\n,;]+/);
-                    let res = [];
-                    shifts.forEach(s => {
-                        let ss = s.trim();
-                        if (!ss || ss === '-') return;
-                        let m = ss.match(/(.*?)\s*-\s*(.*)/);
-                        if (!m) m = ss.match(/(.*?)\s*to\s*(.*)/);
-                        if (m) res.push([timeTo24(m[1].trim()), timeTo24(m[2].trim())]);
-                        else {
-                            let p = ss.split('-');
-                            if (p.length === 1) res.push([timeTo24(p[0].trim()), ""]);
-                            else res.push([timeTo24(p[0].trim()), timeTo24(p[1].trim())]);
-                        }
-                    });
-                    return res.filter(r => r[0] || r[1]);
-                };
-
-                let name, rate, date, branch, s1, s2, s3, s4 = [""], s5 = [""];
-                if (isNewFormat) {
-                    if (mapIdx && mapIdx.date > -1) {
-                        date = formatDate(clean(cols[mapIdx.date]));
-                        name = mapIdx.name > -1 ? clean(cols[mapIdx.name]) : clean(cols[1]);
-                        branch = mapIdx.branch > -1 ? clean(cols[mapIdx.branch]) : (clean(cols[2]) || "Branch A");
-
-                        let combinedStr = mapIdx.s1 > -1 ? clean(cols[mapIdx.s1]) : clean(cols[3]);
-                        let multi = extractMultipleShifts(combinedStr);
-                        if (multi.length > 1) {
-                            s1 = multi[0] || ["", ""];
-                            s2 = multi[1] || ["", ""];
-                            s3 = multi[2] || ["", ""];
-                            s4 = multi[3] || ["", ""];
-                            s5 = multi[4] || ["", ""];
-                        } else {
-                            let checkAndPush = (idx) => {
-                                if (idx === -1) return ["", ""];
-                                let c = idx < cols.length ? clean(cols[idx]) : "";
-                                if (/^[0-9]+(\.[0-9]+)?$/.test(c.replace(/[$£€\s]/g, '')) && !c.includes(':')) {
-                                    return ["", ""];
-                                }
-                                return c ? extractShift(c) : ["", ""];
-                            };
-
-                            s1 = mapIdx.s1 > -1 ? checkAndPush(mapIdx.s1) : (cols[3] ? extractShift(clean(cols[3])) : ["", ""]);
-                            s2 = checkAndPush(mapIdx.s2);
-                            s3 = checkAndPush(mapIdx.s3);
-                            s4 = checkAndPush(mapIdx.s4);
-                            s5 = checkAndPush(mapIdx.s5);
-                        }
-
-                        let rStr = "";
-                        if (mapIdx.rate > -1 && mapIdx.rate < cols.length) rStr = clean(cols[mapIdx.rate]);
-                        if (!rStr || isNaN(parseFloat(rStr.replace(/[^0-9.]/g, '')))) {
-                            let potentialRates = [];
-                            for (let k = 3; k < cols.length; k++) {
-                                let cell = clean(cols[k]);
-                                let numClean = cell.replace(/[$£€\s]/g, '');
-                                if (/^[0-9]+(\.[0-9]+)?$/.test(numClean)) {
-                                    potentialRates.push(numClean);
-                                }
-                            }
-                            if (potentialRates.length >= 3) rStr = potentialRates[potentialRates.length - 2];
-                            else if (potentialRates.length === 2) rStr = potentialRates[0];
-                            else if (potentialRates.length === 1) rStr = potentialRates[0];
-                        }
-                        if (rStr && rStr.replace(/[0-9.]/g, '').length > 0) rStr = rStr.replace(/[^0-9.]/g, '');
-                        rate = parseFloat(rStr) || 0;
+                    let combinedStr = mapIdx.s1 > -1 ? clean(cols[mapIdx.s1]) : clean(cols[3]);
+                    let multi = extractMultipleShifts(combinedStr);
+                    if (multi.length > 1) {
+                        s1 = multi[0] || ["", ""];
+                        s2 = multi[1] || ["", ""];
+                        s3 = multi[2] || ["", ""];
+                        s4 = multi[3] || ["", ""];
+                        s5 = multi[4] || ["", ""];
                     } else {
-                        date = formatDate(clean(cols[0]));
-                        name = clean(cols[1]);
-                        branch = clean(cols[2]) || "Branch A";
-                        s1 = extractShift(cols[3]);
-                        s2 = extractShift(cols[4]);
-                        s3 = extractShift(cols[5]);
-                        let r;
-                        if (cols.length >= 11) {
-                            s4 = extractShift(cols[6]);
-                            s5 = extractShift(cols[7]);
-                            r = clean(cols[9]);
-                        } else if (cols.length >= 9) {
-                            r = clean(cols[7]);
-                        } else if (cols.length === 7 || (cols.length === 8 && cols[7] === "")) {
-                            r = clean(cols[6]);
-                        } else {
-                            r = clean(cols[7]) || clean(cols[6]);
-                        }
-                        if (r && r.replace(/[0-9.]/g, '').length > 0) r = r.replace(/[^0-9.]/g, '');
-                        rate = parseFloat(r) || 0;
+                        let checkAndPush = (idx) => {
+                            if (idx === -1) return ["", ""];
+                            let c = idx < cols.length ? clean(cols[idx]) : "";
+                            if (/^[0-9]+(\.[0-9]+)?$/.test(c.replace(/[$£€\s]/g, '')) && !c.includes(':')) {
+                                return ["", ""];
+                            }
+                            return c ? extractShift(c) : ["", ""];
+                        };
+
+                        s1 = mapIdx.s1 > -1 ? checkAndPush(mapIdx.s1) : (cols[3] ? extractShift(clean(cols[3])) : ["", ""]);
+                        s2 = checkAndPush(mapIdx.s2);
+                        s3 = checkAndPush(mapIdx.s3);
+                        s4 = checkAndPush(mapIdx.s4);
+                        s5 = checkAndPush(mapIdx.s5);
                     }
+
+                    let rStr = "";
+                    if (mapIdx.rate > -1 && mapIdx.rate < cols.length) rStr = clean(cols[mapIdx.rate]);
+                    if (!rStr || isNaN(parseFloat(rStr.replace(/[^0-9.]/g, '')))) {
+                        let potentialRates = [];
+                        for (let k = 3; k < cols.length; k++) {
+                            let cell = clean(cols[k]);
+                            let numClean = cell.replace(/[$£€\s]/g, '');
+                            if (/^[0-9]+(\.[0-9]+)?$/.test(numClean)) {
+                                potentialRates.push(numClean);
+                            }
+                        }
+                        if (potentialRates.length >= 3) rStr = potentialRates[potentialRates.length - 2];
+                        else if (potentialRates.length === 2) rStr = potentialRates[0];
+                        else if (potentialRates.length === 1) rStr = potentialRates[0];
+                    }
+                    if (rStr && rStr.replace(/[0-9.]/g, '').length > 0) rStr = rStr.replace(/[^0-9.]/g, '');
+                    rate = parseFloat(rStr) || 0;
                 } else {
-                    name = clean(cols[0]);
-                    rate = parseFloat(clean(cols[1])) || 0;
-                    date = formatDate(clean(cols[2]));
+                    date = formatDate(clean(cols[0]));
+                    name = clean(cols[1]);
+                    branch = clean(cols[2]) || "Branch A";
                     s1 = extractShift(cols[3]);
                     s2 = extractShift(cols[4]);
                     s3 = extractShift(cols[5]);
-                    branch = clean(cols[8]) || "Branch A";
-                }
-
-                const h = calcH(s1[0], s1[1]) + calcH(s2[0], s2[1]) + calcH(s3[0], s3[1]) + calcH(s4[0], s4[1]) + calcH(s5[0], s5[1]);
-                const entry = { id: Date.now() + i, name, date, branch, s1s: s1[0] || "", s1e: s1[1] || "", s2s: s2[0] || "", s2e: s2[1] || "", s3s: s3[0] || "", s3e: s3[1] || "", s4s: s4[0] || "", s4e: s4[1] || "", s5s: s5[0] || "", s5e: s5[1] || "", total: h, rate, pay: (h * rate).toFixed(2) };
-
-                const exIdx = masterData.findIndex(ex => ex.name === name && ex.date === date);
-                if (exIdx > -1) {
-                    if (masterData[exIdx].branch !== branch) {
-                        if (askMerge === null) {
-                            askMerge = confirm(`CSV contains overlapping dates on different branches. Do you want to MERGE overlapping shifts into single entries? (Cancel generates separate rows per branch)`);
-                        }
-                        if (askMerge) {
-                            let old = masterData[exIdx];
-                            if (!old.s2s && s1[0]) { old.s2s = s1[0] || ""; old.s2e = s1[1] || ""; }
-                            else if (!old.s3s && s1[0]) { old.s3s = s1[0] || ""; old.s3e = s1[1] || ""; }
-                            else if (!old.s4s && s1[0]) { old.s4s = s1[0] || ""; old.s4e = s1[1] || ""; }
-                            else if (!old.s5s && s1[0]) { old.s5s = s1[0] || ""; old.s5e = s1[1] || ""; }
-                            old.total = calcH(old.s1s, old.s1e) + calcH(old.s2s, old.s2e) + calcH(old.s3s, old.s3e) + calcH(old.s4s, old.s4e) + calcH(old.s5s, old.s5e);
-                            old.pay = (old.total * old.rate).toFixed(2);
-                            uC++;
-                        } else {
-                            masterData.push(entry); aC++;
-                        }
+                    let r;
+                    if (cols.length >= 11) {
+                        s4 = extractShift(cols[6]);
+                        s5 = extractShift(cols[7]);
+                        r = clean(cols[9]);
+                    } else if (cols.length >= 9) {
+                        r = clean(cols[7]);
+                    } else if (cols.length === 7 || (cols.length === 8 && cols[7] === "")) {
+                        r = clean(cols[6]);
                     } else {
-                        masterData[exIdx] = entry; uC++;
+                        r = clean(cols[7]) || clean(cols[6]);
+                    }
+                    if (r && r.replace(/[0-9.]/g, '').length > 0) r = r.replace(/[^0-9.]/g, '');
+                    rate = parseFloat(r) || 0;
+                }
+            } else {
+                name = clean(cols[0]);
+                rate = parseFloat(clean(cols[1])) || 0;
+                date = formatDate(clean(cols[2]));
+                s1 = extractShift(cols[3]);
+                s2 = extractShift(cols[4]);
+                s3 = extractShift(cols[5]);
+                branch = clean(cols[8]) || "Branch A";
+            }
+
+            const h = calcH(s1[0], s1[1]) + calcH(s2[0], s2[1]) + calcH(s3[0], s3[1]) + calcH(s4[0], s4[1]) + calcH(s5[0], s5[1]);
+            const entry = { id: Date.now() + i, name, date, branch, s1s: s1[0] || "", s1e: s1[1] || "", s2s: s2[0] || "", s2e: s2[1] || "", s3s: s3[0] || "", s3e: s3[1] || "", s4s: s4[0] || "", s4e: s4[1] || "", s5s: s5[0] || "", s5e: s5[1] || "", total: h, rate, pay: (h * rate).toFixed(2) };
+
+            const exIdx = masterData.findIndex(ex => ex.name === name && ex.date === date);
+            if (exIdx > -1) {
+                if (masterData[exIdx].branch !== branch) {
+                    if (askMerge === null) {
+                        askMerge = confirm(`CSV contains overlapping dates on different branches. Do you want to MERGE overlapping shifts into single entries? (Cancel generates separate rows per branch)`);
+                    }
+                    if (askMerge) {
+                        let old = masterData[exIdx];
+                        if (!old.s2s && s1[0]) { old.s2s = s1[0] || ""; old.s2e = s1[1] || ""; }
+                        else if (!old.s3s && s1[0]) { old.s3s = s1[0] || ""; old.s3e = s1[1] || ""; }
+                        else if (!old.s4s && s1[0]) { old.s4s = s1[0] || ""; old.s4e = s1[1] || ""; }
+                        else if (!old.s5s && s1[0]) { old.s5s = s1[0] || ""; old.s5e = s1[1] || ""; }
+                        old.total = calcH(old.s1s, old.s1e) + calcH(old.s2s, old.s2e) + calcH(old.s3s, old.s3e) + calcH(old.s4s, old.s4e) + calcH(old.s5s, old.s5e);
+                        old.pay = (old.total * old.rate).toFixed(2);
+                        uC++;
+                    } else {
+                        masterData.push(entry); aC++;
                     }
                 } else {
-                    masterData.push(entry); aC++;
+                    masterData[exIdx] = entry; uC++;
                 }
+            } else {
+                masterData.push(entry); aC++;
             }
-            masterData.sort((a, b) => b.date.localeCompare(a.date));
-            localStorage.setItem("payroll_v20", JSON.stringify(masterData));
+        }
+        masterData.sort((a, b) => b.date.localeCompare(a.date));
+        localStorage.setItem("payroll_v20", JSON.stringify(masterData));
 
-            // Force table filters completely open
-            document.getElementById("viewFilter").value = "ALL";
-            document.getElementById("branchFilter").value = "ALL";
-            if (document.getElementById("dateFilterPreset")) {
-                document.getElementById("dateFilterPreset").value = "custom";
-            }
-            document.getElementById("filterStartDate").value = "";
-            document.getElementById("filterEndDate").value = "";
-            document.getElementById("customDateInputs").style.display = "none";
+        // Force table filters completely open
+        document.getElementById("viewFilter").value = "ALL";
+        document.getElementById("branchFilter").value = "ALL";
+        if (document.getElementById("dateFilterPreset")) {
+            document.getElementById("dateFilterPreset").value = "custom";
+        }
+        document.getElementById("filterStartDate").value = "";
+        document.getElementById("filterEndDate").value = "";
+        document.getElementById("customDateInputs").style.display = "none";
 
-            renderAll();
-            alert(`Synced: ${aC} new, ${uC} updated/merged.`);
-        } catch (e) { alert("Format Error: " + e.message); }
-        fileInput.value = '';
-    }; reader.readAsText(fileInput.files[0]);
+        renderAll();
+        alert(`Synced: ${aC} new, ${uC} updated/merged.`);
+    } catch (e) { alert("Format Error: " + e.message); }
 };
 
 window.importAuditCSV = function () {
     const fileInput = document.getElementById('auditCsvImport'); if (!fileInput.files[0]) return;
     const reader = new FileReader();
-    reader.onload = function (e) {
-        try {
-            const rawText = e.target.result;
-            const rows = [];
-            let inQ = false; let currentLine = "";
-            for (let i = 0; i < rawText.length; i++) {
-                const char = rawText[i];
-                if (char === '"') inQ = !inQ;
-                if (char === '\n' && !inQ) {
-                    if (currentLine.trim()) rows.push(currentLine);
-                    currentLine = "";
-                } else if (char === '\r' && !inQ) {
-                    if (rawText[i + 1] === '\n') i++;
-                    if (currentLine.trim()) rows.push(currentLine);
-                    currentLine = "";
-                } else { currentLine += char; }
-            }
-            if (currentLine.trim()) rows.push(currentLine);
+    reader.onload = function (e) { sharedCSVRoute(e.target.result); fileInput.value = ''; };
+    reader.readAsText(fileInput.files[0]);
+};
 
-            let aC = 0, uC = 0;
-            if (rows.length > 0) {
-                for (let i = 1; i < rows.length; i++) {
-                    const row = rows[i];
-                    if (row.toLowerCase().includes("summary data")) break;
+window.processAuditCSV = function (rawText) {
+    try {
+        const rows = [];
+        let inQ = false; let currentLine = "";
+        for (let i = 0; i < rawText.length; i++) {
+            const char = rawText[i];
+            if (char === '"') inQ = !inQ;
+            if (char === '\n' && !inQ) {
+                if (currentLine.trim()) rows.push(currentLine);
+                currentLine = "";
+            } else if (char === '\r' && !inQ) {
+                if (rawText[i + 1] === '\n') i++;
+                if (currentLine.trim()) rows.push(currentLine);
+                currentLine = "";
+            } else { currentLine += char; }
+        }
+        if (currentLine.trim()) rows.push(currentLine);
 
-                    const cols = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(v => v.replace(/"/g, '').trim());
-                    if (cols.length < 8) continue;
+        let aC = 0, uC = 0;
+        if (rows.length > 0) {
+            for (let i = 1; i < rows.length; i++) {
+                const row = rows[i];
+                if (row.toLowerCase().includes("summary data")) break;
 
-                    const date = cols[0];
-                    if (!date || !date.includes('-')) continue;
-                    const branch = cols[1];
-                    const opening = parseFloat(cols[2]) || 0;
-                    const closing = parseFloat(cols[3]) || 0;
-                    const salesTotal = parseFloat(cols[5]) || 0;
-                    const expenses = parseFloat(cols[7]) || 0;
+                const cols = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(v => v.replace(/"/g, '').trim());
+                if (cols.length < 8) continue;
 
-                    let salesArray = [];
-                    if (cols.length > 9 && cols[9].trim() !== '') {
-                        salesArray = cols[9].split('|').map(s => parseFloat(s)).filter(s => !isNaN(s));
-                    }
-                    if (salesArray.length === 0) {
-                        salesArray = [salesTotal];
-                    }
+                const date = cols[0];
+                if (!date || !date.includes('-')) continue;
+                const branch = cols[1];
+                const opening = parseFloat(cols[2]) || 0;
+                const closing = parseFloat(cols[3]) || 0;
+                const salesTotal = parseFloat(cols[5]) || 0;
+                const expenses = parseFloat(cols[7]) || 0;
 
-                    const entry = {
-                        id: Date.now() + i,
-                        date: date,
-                        branch: branch,
-                        opening: opening,
-                        closing: closing,
-                        sales: salesArray,
-                        expenses: expenses
-                    };
+                let salesArray = [];
+                if (cols.length > 9 && cols[9].trim() !== '') {
+                    salesArray = cols[9].split('|').map(s => parseFloat(s)).filter(s => !isNaN(s));
+                }
+                if (salesArray.length === 0) {
+                    salesArray = [salesTotal];
+                }
 
-                    const exIdx = auditData.findIndex(ex => ex.date === date && ex.branch === branch);
-                    if (exIdx > -1) {
-                        auditData[exIdx] = entry; uC++;
-                    } else {
-                        auditData.push(entry); aC++;
-                    }
+                const entry = {
+                    id: Date.now() + i,
+                    date: date,
+                    branch: branch,
+                    opening: opening,
+                    closing: closing,
+                    sales: salesArray,
+                    expenses: expenses
+                };
+
+                const exIdx = auditData.findIndex(ex => ex.date === date && ex.branch === branch);
+                if (exIdx > -1) {
+                    auditData[exIdx] = entry; uC++;
+                } else {
+                    auditData.push(entry); aC++;
                 }
             }
-            localStorage.setItem("auditData_v20", JSON.stringify(auditData));
-            renderAll();
-            alert(`Audit Synced: ${aC} new, ${uC} updated.`);
-        } catch (e) { alert("Format Error: " + e.message); }
-        fileInput.value = '';
-    }; reader.readAsText(fileInput.files[0]);
+        }
+        localStorage.setItem("auditData_v20", JSON.stringify(auditData));
+        renderAll();
+        alert(`Audit Synced: ${aC} new, ${uC} updated.`);
+    } catch (e) { alert("Format Error: " + e.message); }
 };
 
 window.updateAuditBranchFromDropdown = function () {

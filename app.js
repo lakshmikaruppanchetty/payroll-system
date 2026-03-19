@@ -916,8 +916,13 @@ window.processPayrollCSV = function (rawText) {
         masterData.sort((a, b) => b.date.localeCompare(a.date));
         localStorage.setItem("payroll_v20", JSON.stringify(masterData));
 
-        let hasBranch = masterData.some(e => e.branch && e.branch !== "Main Branch" && e.branch !== "Branch A");
-        let hasExt = masterData.some(e => (e.s4s || e.s4e || e.s5s || e.s5e));
+        let hasBranchCol = (mapIdx && mapIdx.branch > -1);
+        let uniqueBranches = new Set(masterData.map(e => (e.branch || "").trim()).filter(b => b !== ""));
+        let hasBranch = hasBranchCol || uniqueBranches.size > 1 || masterData.some(e => e.branch && e.branch.trim() !== "Main Branch" && e.branch.trim() !== "Branch A" && e.branch.trim() !== "");
+
+        let hasExtCol = (mapIdx && (mapIdx.s4 > -1 || mapIdx.s5 > -1));
+        let hasExt = hasExtCol || masterData.some(e => (e.s4s || e.s4e || e.s5s || e.s5e));
+
         let settingsChanged = false;
         if (hasBranch && !document.getElementById('toggleBranch').checked) {
             document.getElementById('toggleBranch').checked = true;
@@ -1015,7 +1020,10 @@ window.processAuditCSV = function (rawText) {
         }
         localStorage.setItem("auditData_v20", JSON.stringify(auditData));
 
-        let hasBranchAudit = auditData.some(e => e.branch && e.branch !== "Main Branch" && e.branch !== "Branch A");
+        let hasBranchAuditCol = (rows.length > 0 && rows[0].toLowerCase().includes('branch'));
+        let uniqueAuditBranches = new Set(auditData.map(e => (e.branch || "").trim()).filter(b => b !== ""));
+        let hasBranchAudit = hasBranchAuditCol || uniqueAuditBranches.size > 1 || auditData.some(e => e.branch && e.branch.trim() !== "Main Branch" && e.branch.trim() !== "Branch A" && e.branch.trim() !== "");
+
         if (hasBranchAudit && !document.getElementById('toggleBranch').checked) {
             document.getElementById('toggleBranch').checked = true;
             document.getElementById('toggleBranchSummary').checked = true;

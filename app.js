@@ -916,6 +916,20 @@ window.processPayrollCSV = function (rawText) {
         masterData.sort((a, b) => b.date.localeCompare(a.date));
         localStorage.setItem("payroll_v20", JSON.stringify(masterData));
 
+        let hasBranch = masterData.some(e => e.branch && e.branch !== "Main Branch" && e.branch !== "Branch A");
+        let hasExt = masterData.some(e => (e.s4s || e.s4e || e.s5s || e.s5e));
+        let settingsChanged = false;
+        if (hasBranch && !document.getElementById('toggleBranch').checked) {
+            document.getElementById('toggleBranch').checked = true;
+            document.getElementById('toggleBranchSummary').checked = true;
+            settingsChanged = true;
+        }
+        if (hasExt && !document.getElementById('toggleExtendedShifts').checked) {
+            document.getElementById('toggleExtendedShifts').checked = true;
+            settingsChanged = true;
+        }
+        if (settingsChanged) saveSettings();
+
         // Force table filters completely open
         document.getElementById("viewFilter").value = "ALL";
         document.getElementById("branchFilter").value = "ALL";
@@ -1000,6 +1014,14 @@ window.processAuditCSV = function (rawText) {
             }
         }
         localStorage.setItem("auditData_v20", JSON.stringify(auditData));
+
+        let hasBranchAudit = auditData.some(e => e.branch && e.branch !== "Main Branch" && e.branch !== "Branch A");
+        if (hasBranchAudit && !document.getElementById('toggleBranch').checked) {
+            document.getElementById('toggleBranch').checked = true;
+            document.getElementById('toggleBranchSummary').checked = true;
+            saveSettings();
+        }
+
         renderAll();
         alert(`Audit Synced: ${aC} new, ${uC} updated.`);
     } catch (e) { alert("Format Error: " + e.message); }

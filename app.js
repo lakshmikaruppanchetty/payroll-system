@@ -4,6 +4,7 @@ let editingAuditId = null;
 let appSettings = JSON.parse(localStorage.getItem("settings_v20")) || {};
 appSettings.showBranch = appSettings.showBranch ?? false;
 appSettings.showSummary = appSettings.showSummary ?? false;
+appSettings.showBranchSummary = appSettings.showBranchSummary ?? false;
 appSettings.showPdf = appSettings.showPdf ?? true;
 appSettings.showCsv = appSettings.showCsv ?? true;
 appSettings.showExportPdf = appSettings.showExportPdf ?? true;
@@ -924,10 +925,15 @@ window.processPayrollCSV = function (rawText) {
         let hasExt = hasExtCol || masterData.some(e => (e.s4s || e.s4e || e.s5s || e.s5e));
 
         let settingsChanged = false;
-        if (hasBranch && !document.getElementById('toggleBranch').checked) {
-            document.getElementById('toggleBranch').checked = true;
-            document.getElementById('toggleBranchSummary').checked = true;
-            settingsChanged = true;
+        if (hasBranch) {
+            if (!document.getElementById('toggleBranch').checked) {
+                document.getElementById('toggleBranch').checked = true;
+                settingsChanged = true;
+            }
+            if (!document.getElementById('toggleBranchSummary').checked) {
+                document.getElementById('toggleBranchSummary').checked = true;
+                settingsChanged = true;
+            }
         }
         if (hasExt && !document.getElementById('toggleExtendedShifts').checked) {
             document.getElementById('toggleExtendedShifts').checked = true;
@@ -1024,11 +1030,18 @@ window.processAuditCSV = function (rawText) {
         let uniqueAuditBranches = new Set(auditData.map(e => (e.branch || "").trim()).filter(b => b !== ""));
         let hasBranchAudit = hasBranchAuditCol || uniqueAuditBranches.size > 1 || auditData.some(e => e.branch && e.branch.trim() !== "Main Branch" && e.branch.trim() !== "Branch A" && e.branch.trim() !== "");
 
-        if (hasBranchAudit && !document.getElementById('toggleBranch').checked) {
-            document.getElementById('toggleBranch').checked = true;
-            document.getElementById('toggleBranchSummary').checked = true;
-            saveSettings();
+        let settingsChangedAudit = false;
+        if (hasBranchAudit) {
+            if (!document.getElementById('toggleBranch').checked) {
+                document.getElementById('toggleBranch').checked = true;
+                settingsChangedAudit = true;
+            }
+            if (!document.getElementById('toggleBranchSummary').checked) {
+                document.getElementById('toggleBranchSummary').checked = true;
+                settingsChangedAudit = true;
+            }
         }
+        if (settingsChangedAudit) saveSettings();
 
         renderAll();
         alert(`Audit Synced: ${aC} new, ${uC} updated.`);

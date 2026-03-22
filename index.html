@@ -211,7 +211,7 @@
                         </select>
                         <div id="customDateInputs" style="display: none; align-items: center;">
                             <label>Start Date:</label>
-                            <input type="date" id="filterStartDate" onchange="renderAll()"
+                            <input type="date" id="filterStartDate" onchange="onStartDateChange()"
                                 style="width: 140px; padding: 6px; margin-left: 5px;">
                             <label style="margin-left: 10px;">End Date:</label>
                             <input type="date" id="filterEndDate" onchange="renderAll()"
@@ -844,7 +844,7 @@
     <!-- jsPDF and AutoTable for PDF Generation -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
-    <script src="app.js?v=3"></script>
+    <script src="app.js?v=4"></script>
 </body>
 
 </html>

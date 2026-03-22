@@ -489,6 +489,25 @@ window.handleGlobalClick = function (e) {
     }
 };
 
+window.onStartDateChange = function () {
+    let sD = document.getElementById("filterStartDate").value;
+    if (sD) {
+        const isAuditActive = document.getElementById('auditView').classList.contains('active') || document.getElementById('auditReportsView').classList.contains('active');
+        const dataArr = isAuditActive ? auditData : masterData;
+        if (dataArr.length > 0) {
+            let maxDate = dataArr.reduce((max, d) => d.date > max ? d.date : max, "0000-00-00");
+            if (maxDate && maxDate !== "0000-00-00") {
+                if (maxDate >= sD) {
+                    document.getElementById("filterEndDate").value = maxDate;
+                } else {
+                    document.getElementById("filterEndDate").value = sD;
+                }
+            }
+        }
+    }
+    renderAll();
+};
+
 window.clearDateFilter = function () {
     document.getElementById("dateFilterPreset").value = "all_time";
     document.getElementById("customDateInputs").style.display = "none";

@@ -608,6 +608,7 @@ window.addEntry = function () {
                 else if (!dup.s3s && ns1s) { dup.s3s = ns1s; dup.s3e = ns1e; }
                 else if (!dup.s4s && ns1s && appSettings.showExtendedShifts) { dup.s4s = ns1s; dup.s4e = ns1e; }
                 else if (!dup.s5s && ns1s && appSettings.showExtendedShifts) { dup.s5s = ns1s; dup.s5e = ns1e; }
+                dup.branch = branch;
                 dup.total = calcH(dup.s1s, dup.s1e) + calcH(dup.s2s, dup.s2e) + calcH(dup.s3s, dup.s3e) + (appSettings.showExtendedShifts ? calcH(dup.s4s, dup.s4e) + calcH(dup.s5s, dup.s5e) : 0);
                 dup.pay = (dup.total * dup.rate).toFixed(2);
                 localStorage.setItem("payroll_v20", JSON.stringify(masterData));
@@ -1069,7 +1070,7 @@ window.processAuditCSV = function (rawText) {
 
 window.updateAuditBranchFromDropdown = function () {
     const sel = document.getElementById("auditBranchSelectDropdown").value;
-    if (sel) {
+    if (sel !== "__SELECT__") {
         document.getElementById("auditBranchName").value = sel;
         if (typeof checkExistingAudit === 'function') checkExistingAudit();
     }
@@ -1196,12 +1197,12 @@ window.renderAll = function () {
     emps.forEach(n => { eS.innerHTML += `<option value="${n}">${n}</option>`; });
     filterEmps.forEach(n => { document.getElementById("viewFilter").innerHTML += `<option value="${n}">${n}</option>`; });
 
-    bS.innerHTML = '<option value="">-- Select Branch --</option>'; document.getElementById("branchFilter").innerHTML = '<option value="ALL">All Branches</option>';
+    bS.innerHTML = '<option value="__SELECT__">-- Select Branch --</option>'; document.getElementById("branchFilter").innerHTML = '<option value="ALL">All Branches</option>';
     const aBS = document.getElementById("auditBranchSelectDropdown");
-    if (aBS) { const cabS = aBS.value; aBS.innerHTML = '<option value="">-- Select Branch --</option>'; branches.forEach(b => { aBS.innerHTML += `<option value="${b}">${b}</option>`; }); aBS.value = (cabS === "ALL" || !cabS) ? "" : cabS; }
+    if (aBS) { const cabS = aBS.value; aBS.innerHTML = '<option value="__SELECT__">-- Select Branch --</option>'; branches.forEach(b => { aBS.innerHTML += `<option value="${b}">${b || '[Unassigned]'}</option>`; }); aBS.value = (cabS === "ALL" || !cabS) ? "__SELECT__" : cabS; }
 
     const abS = document.getElementById("auditBulkBranchSelect");
-    if (abS) { const curAb = abS.value; abS.innerHTML = '<option value="">-- Target Branch --</option><option value="ALL">ALL Branches</option>'; branches.forEach(b => { abS.innerHTML += `<option value="${b}">${b}</option>`; }); abS.value = (curAb && ["ALL", ...branches].includes(curAb)) ? curAb : ""; }
+    if (abS) { const curAb = abS.value; abS.innerHTML = '<option value="__SELECT__">-- Target Branch --</option><option value="ALL">ALL Branches</option>'; branches.forEach(b => { abS.innerHTML += `<option value="${b}">${b || '[Unassigned]'}</option>`; }); abS.value = (curAb && ["ALL", ...branches].includes(curAb)) ? curAb : "__SELECT__"; }
 
     branches.forEach(b => { bS.innerHTML += `<option value="${b}">${b}</option>`; });
     filterBranches.forEach(b => { document.getElementById("branchFilter").innerHTML += `<option value="${b}">${b}</option>`; });
@@ -1530,7 +1531,7 @@ window.updateNameFromDropdown = function () {
 };
 window.updateBranchFromDropdown = function () {
     const s = document.getElementById("branchSelectDropdown");
-    if (s.value !== "") {
+    if (s.value !== "__SELECT__") {
         document.getElementById("branchName").value = s.value;
         document.getElementById("branchFilter").value = s.value;
         renderAll();
@@ -2437,10 +2438,15 @@ window.saveAuditEntry = function () {
 
     let targetId = editingAuditId;
     if (!targetId) {
-        const existing = auditData.find(a => a.date === date && a.branch === branch);
-        if (existing) {
+        const existingExact = auditData.find(a => a.date === date && a.branch === branch);
+        const existingEmpty = auditData.find(a => a.date === date && (!a.branch || a.branch.trim() === ""));
+        if (existingExact) {
             if (!confirm(`An existing audit record for ${branch || 'the selected branch'} on ${date} already exists. Are you sure you want to overwrite it?`)) return;
-            targetId = existing.id;
+            targetId = existingExact.id;
+        } else if (existingEmpty && branch.trim() !== "") {
+            if (confirm(`An unassigned record (empty branch) exists on ${date}. Do you want to update its branch to '${branch}'?`)) {
+                targetId = existingEmpty.id;
+            }
         }
     }
 
@@ -2625,7 +2631,7 @@ window.renderAuditData = function () {
 window.executeAuditBulkUpdate = function () {
     const sourceBranch = document.getElementById("auditBulkBranchSelect").value;
     const targetName = document.getElementById("auditBranchName").value.trim();
-    if (!sourceBranch) return alert("Select a Target Branch Record from the dropdown to apply changes to.");
+    if (sourceBranch === "__SELECT__") return alert("Select a Target Branch Record from the dropdown to apply changes to.");
     if (!targetName) return alert("Please type a new branch name in the 'Enter Branch' field to apply.");
     const p = prompt("Security PIN required for global update:");
     if (p === appSettings.securityPin) {

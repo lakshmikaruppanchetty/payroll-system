@@ -44,6 +44,7 @@
             display: flex;
             align-items: center;
             gap: 10px;
+            position: relative;
         }
 
         .sidebar-menu li i {
@@ -60,6 +61,38 @@
         .sidebar.collapsed .sidebar-menu li span {
             opacity: 0;
             width: 0;
+        }
+
+        .sidebar.collapsed .sidebar-menu li:hover::after {
+            content: attr(data-title);
+            position: absolute;
+            left: 100%;
+            top: 50%;
+            transform: translateY(-50%);
+            margin-left: 10px;
+            background: #343a40;
+            color: #fff;
+            padding: 6px 12px;
+            border-radius: 6px;
+            white-space: nowrap;
+            font-size: 13px;
+            font-weight: normal;
+            z-index: 1000;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            pointer-events: none;
+        }
+
+        .sidebar.collapsed .sidebar-menu li:hover::before {
+            content: "";
+            position: absolute;
+            left: 100%;
+            top: 50%;
+            transform: translateY(-50%);
+            border-width: 5px;
+            border-style: solid;
+            border-color: transparent #343a40 transparent transparent;
+            z-index: 1000;
+            pointer-events: none;
         }
 
         .sidebar-menu li:hover,

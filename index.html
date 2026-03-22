@@ -31,28 +31,19 @@
             </div>
         </div>
         <ul class="sidebar-menu">
-            <li id="menuPayroll" class="active" onclick="switchTab('payroll')"><i>📁</i> <span>Payroll Management</span>
+            <li id="menuPayroll" class="active" onclick="switchTab('payroll')" data-title="Payroll Management"><i>📁</i>
+                <span>Payroll Management</span>
             </li>
-            <li id="menuAudit" onclick="switchTab('audit')"><i>💵</i> <span>Cash & Tips Audit</span></li>
-
-            <li onclick="toggleSubMenu('reportsSubMenu', this)">
-                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                    <div><i>📊</i> <span>Reports & Analytics</span></div>
-                    <span class="nav-arrow" style="font-size: 10px; transition: transform 0.2s;">▼</span>
-                </div>
+            <li id="menuAudit" onclick="switchTab('audit')" data-title="Cash & Tips Audit"><i>💵</i> <span>Cash & Tips
+                    Audit</span></li>
+            <li id="menuReports" onclick="switchTab('reports')" data-title="Payroll Reports"><i>📊</i> <span>Payroll
+                    Reports</span></li>
+            <li id="menuAuditReports" onclick="switchTab('auditReports')" data-title="Cash & Tips Reports"><i>📉</i>
+                <span>Cash & Tips Reports</span>
             </li>
-            <ul id="reportsSubMenu" class="sub-menu"
-                style="display: none; list-style-type: none; padding-left: 20px; margin: 0; background: rgba(0,0,0,0.1);">
-                <li id="menuReports" onclick="switchTab('reports')" style="font-size: 0.9em;">
-                    <i>�</i> <span>Payroll Reports</span>
-                </li>
-                <li id="menuAuditReports" onclick="switchTab('auditReports')" style="font-size: 0.9em;">
-                    <i>📉</i> <span>Cash & Tips Reports</span>
-                </li>
-            </ul>
-
-            <li id="menuSettings" onclick="switchTab('settings')"><i>⚙️</i> <span>Settings</span></li>
-            <li id="menuAbout" onclick="switchTab('about')"><i>ℹ️</i> <span>About</span></li>
+            <li id="menuSettings" onclick="switchTab('settings')" data-title="Settings"><i>⚙️</i> <span>Settings</span>
+            </li>
+            <li id="menuAbout" onclick="switchTab('about')" data-title="About"><i>ℹ️</i> <span>About</span></li>
         </ul>
     </div>
 
@@ -844,7 +835,7 @@
     <!-- jsPDF and AutoTable for PDF Generation -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
-    <script src="app.js?v=4"></script>
+    <script src="app.js?v=5"></script>
 </body>
 
 </html>

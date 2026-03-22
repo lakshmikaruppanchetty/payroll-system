@@ -2689,16 +2689,18 @@ window.renderAuditReports = function () {
 
     display.sort((a, b) => a.date.localeCompare(b.date));
 
-    // Audit Trend Chart
-    const ctx = document.getElementById("auditTrendGraph");
-    if (ctx && typeof Chart !== 'undefined') {
+    // Sales Graph
+    const ctxSales = document.getElementById("auditSalesGraph");
+    const ctxTips = document.getElementById("auditTipsGraph");
+
+    if (ctxSales && ctxTips && typeof Chart !== 'undefined') {
         const dates = [...new Set(display.map(d => d.date))].sort();
+        const salesData = [];
         const tipsData = [];
-        const netFlowData = [];
 
         dates.forEach(d => {
             let dateRecords = display.filter(r => r.date === d);
-            let dTips = 0, dNet = 0;
+            let dSales = 0, dTips = 0;
             dateRecords.forEach(r => {
                 const o = parseFloat(r.opening) || 0;
                 const c = parseFloat(r.closing) || 0;
@@ -2706,43 +2708,44 @@ window.renderAuditReports = function () {
                 const sTotal = (r.sales || []).reduce((sum, v) => sum + (parseFloat(v) || 0), 0);
                 const cout = c - o;
                 dTips += cout - sTotal;
-                dNet += c - cout - ex;
+                dSales += sTotal;
             });
+            salesData.push(dSales);
             tipsData.push(dTips);
-            netFlowData.push(dNet);
         });
 
-        if (auditTrendChartInstance) auditTrendChartInstance.destroy();
-        auditTrendChartInstance = new Chart(ctx, {
+        if (window.auditSalesChartInstance) window.auditSalesChartInstance.destroy();
+        window.auditSalesChartInstance = new Chart(ctxSales, {
             type: 'bar',
             data: {
                 labels: dates,
-                datasets: [
-                    {
-                        label: `Total Tips (${sym})`,
-                        data: tipsData,
-                        backgroundColor: 'rgba(83, 211, 151, 0.7)',
-                        borderColor: 'rgba(83, 211, 151, 1)',
-                        borderWidth: 1
-                    },
-                    {
-                        label: `Closing Balance (${sym})`,
-                        data: netFlowData,
-                        type: 'line',
-                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                        borderColor: 'rgba(54, 162, 235, 1)',
-                        borderWidth: 2,
-                        fill: false,
-                        tension: 0.2
-                    }
-                ]
+                datasets: [{
+                    label: `Gross Sales (${sym})`,
+                    data: salesData,
+                    backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                }]
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: { y: { beginAtZero: true } },
-                plugins: { legend: { display: true, position: 'bottom' } }
-            }
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+        });
+
+        if (window.auditTipsChartInstance) window.auditTipsChartInstance.destroy();
+        window.auditTipsChartInstance = new Chart(ctxTips, {
+            type: 'line',
+            data: {
+                labels: dates,
+                datasets: [{
+                    label: `Tips (${sym})`,
+                    data: tipsData,
+                    backgroundColor: 'rgba(83, 211, 151, 0.2)',
+                    borderColor: 'rgba(83, 211, 151, 1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.2
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
         });
     }
 

@@ -1604,6 +1604,8 @@ window.exportToExcel = function () {
             return ok;
         });
 
+        curData.sort((a, b) => a.date.localeCompare(b.date));
+
         let tCashOut = 0, tSales = 0, tTips = 0, tExp = 0, tNet = 0;
 
         curData.forEach(d => {
@@ -1667,6 +1669,8 @@ window.exportToExcel = function () {
             if (ok && eD) ok = d.date <= eD;
             return ok;
         });
+
+        curData.sort((a, b) => a.date.localeCompare(b.date));
 
         curData.forEach(d => {
             if (showExt) {
@@ -1760,6 +1764,8 @@ window.exportToPDF = function () {
             return ok;
         });
 
+        curData.sort((a, b) => a.date.localeCompare(b.date));
+
         if (curData.length === 0) return alert("No audit data to export!");
 
         const tableHeaders = [["Date", "Branch", "Opening", "Closing", "Cash Out", "Sales", "Tips", "Expenses", "Closing Bal"]];
@@ -1804,6 +1810,8 @@ window.exportToPDF = function () {
         if (ok && eD) ok = d.date <= eD;
         return ok;
     });
+
+    curData.sort((a, b) => a.date.localeCompare(b.date));
 
     if (curData.length === 0) {
         alert("No data to export!");

@@ -761,21 +761,21 @@ window.processPayrollCSV = function (rawText) {
 
             function formatDate(str_val) {
                 if (!str_val) return "";
+                if (str_val.includes('T')) str_val = str_val.split('T')[0];
                 let p;
                 if (str_val.includes('/')) p = str_val.split('/');
                 else if (str_val.includes('-')) p = str_val.split('-');
                 else return str_val;
+
                 if (p.length !== 3) return str_val;
+
+                if (p[0].length === 4) {
+                    return `${p[0]}-${p[1].padStart(2, '0')}-${p[2].padStart(2, '0')}`;
+                }
 
                 let y = parseInt(p[2], 10);
                 if (y < 100) y += 2000;
 
-                // Assumes M/D/Y or M-D-Y format generally in USA, but if it looks like Y-M-D it leaves it.
-                if (str_val.includes('-') && p[0].length === 4) {
-                    return `${p[0]}-${p[1].padStart(2, '0')}-${p[2].padStart(2, '0')}`;
-                }
-
-                // Help edge cases where DD is first.
                 if (parseInt(p[0], 10) > 12) {
                     return `${y.toString()}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`;
                 }
@@ -1009,16 +1009,21 @@ window.processAuditCSV = function (rawText) {
 
         function formatDate(str_val) {
             if (!str_val) return "";
+            if (str_val.includes('T')) str_val = str_val.split('T')[0];
             let p;
             if (str_val.includes('/')) p = str_val.split('/');
             else if (str_val.includes('-')) p = str_val.split('-');
             else return str_val;
+
             if (p.length !== 3) return str_val;
-            let y = parseInt(p[2], 10);
-            if (y < 100) y += 2000;
-            if (str_val.includes('-') && p[0].length === 4) {
+
+            if (p[0].length === 4) {
                 return `${p[0]}-${p[1].padStart(2, '0')}-${p[2].padStart(2, '0')}`;
             }
+
+            let y = parseInt(p[2], 10);
+            if (y < 100) y += 2000;
+
             if (parseInt(p[0], 10) > 12) {
                 return `${y.toString()}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`;
             }

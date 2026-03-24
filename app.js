@@ -774,6 +774,12 @@ window.processPayrollCSV = function (rawText) {
                 if (str_val.includes('-') && p[0].length === 4) {
                     return `${p[0]}-${p[1].padStart(2, '0')}-${p[2].padStart(2, '0')}`;
                 }
+
+                // Help edge cases where DD is first.
+                if (parseInt(p[0], 10) > 12) {
+                    return `${y.toString()}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`;
+                }
+
                 return `${y.toString()}-${p[0].padStart(2, '0')}-${p[1].padStart(2, '0')}`;
             }
 
@@ -1001,6 +1007,24 @@ window.processAuditCSV = function (rawText) {
         }
         if (currentLine.trim()) rows.push(currentLine);
 
+        function formatDate(str_val) {
+            if (!str_val) return "";
+            let p;
+            if (str_val.includes('/')) p = str_val.split('/');
+            else if (str_val.includes('-')) p = str_val.split('-');
+            else return str_val;
+            if (p.length !== 3) return str_val;
+            let y = parseInt(p[2], 10);
+            if (y < 100) y += 2000;
+            if (str_val.includes('-') && p[0].length === 4) {
+                return `${p[0]}-${p[1].padStart(2, '0')}-${p[2].padStart(2, '0')}`;
+            }
+            if (parseInt(p[0], 10) > 12) {
+                return `${y.toString()}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`;
+            }
+            return `${y.toString()}-${p[0].padStart(2, '0')}-${p[1].padStart(2, '0')}`;
+        }
+
         let aC = 0, uC = 0;
         if (rows.length > 0) {
             for (let i = 1; i < rows.length; i++) {
@@ -1010,7 +1034,7 @@ window.processAuditCSV = function (rawText) {
                 const cols = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(v => v.replace(/"/g, '').trim());
                 if (cols.length < 8) continue;
 
-                const date = cols[0];
+                const date = formatDate(cols[0]);
                 if (!date || !date.includes('-')) continue;
                 const branch = cols[1];
                 const opening = parseFloat(cols[2]) || 0;
@@ -1586,13 +1610,12 @@ window.clearAllTablesSecure = function () {
 };
 
 window.exportToExcel = function () {
+    const fmtD = (dt) => dt;
     const isAuditActive = document.getElementById('auditView').classList.contains('active') || document.getElementById('auditReportsView').classList.contains('active');
-    const fmtD = (dt) => dt && dt.includes('-') ? `${dt.split('-')[1]}-${dt.split('-')[2]}-${dt.split('-')[0]}` : dt;
 
     if (isAuditActive) {
         let csv = "Date,Branch,Opening Balance,Closing Balance,Cash Out,Sales Total,Tips,Other Expenses,Net Final,Individual Transactions\n";
         const curBranchFilter = document.getElementById("branchFilter").value;
-        const fmtD = (dt) => dt && dt.includes('-') ? `${dt.split('-')[1]}-${dt.split('-')[2]}-${dt.split('-')[0]}` : dt;
 
         let curData = auditData.filter(d => {
             let ok = true;

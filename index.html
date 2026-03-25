@@ -479,20 +479,30 @@
                     </div>
                 </details>
             </div>
-            style="color:rgba(255, 255, 255, 0.5); font-size:10px;">↕</span>
-            </th>
-            <th>Opening</th>
-            <th>Closing</th>
-            <th>Cash Out</th>
-            <th>Sales</th>
-            <th>Tips</th>
-            <th>Other Exp</th>
-            <th>Closing Bal</th>
-            <th>Actions</th>
-            </tr>
-            </thead>
-            <tbody id="auditHistoryBody"></tbody>
-            </table>
+            <div class="table-container no-print">
+                <table id="auditDailyTable">
+                    <thead>
+                        <tr>
+                            <th style="cursor: pointer;" onclick="toggleAuditSort('date')">Date <span
+                                    id="auditSortIconDate"
+                                    style="color:rgba(255, 255, 255, 0.5); font-size:10px;">▼</span></th>
+                            <th id="hdrBranchAudit" style="cursor: pointer;" onclick="toggleAuditSort('branch')">Branch
+                                <span id="auditSortIconBranch"
+                                    style="color:rgba(255, 255, 255, 0.5); font-size:10px;">↕</span>
+                            </th>
+                            <th>Opening</th>
+                            <th>Closing</th>
+                            <th>Cash Out</th>
+                            <th>Sales</th>
+                            <th>Tips</th>
+                            <th>Other Exp</th>
+                            <th>Closing Bal</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="auditHistoryBody"></tbody>
+                </table>
+            </div>
         </div>
 
         <div id="reportsView" class="view-section">

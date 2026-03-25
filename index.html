@@ -293,9 +293,19 @@
         </div>
 
         <div id="auditView" class="view-section">
-            <h2 style="text-align: center;">Cash & Tips Audit</h2>
+            <h2 style="text-align: center;" class="no-print">Cash & Tips Audit</h2>
+            <div class="print-header" style="display: none; text-align: center; margin-bottom: 20px;">
+                <h1 style="margin: 0; color: #333;">Shift Audit Report</h1>
+                <h3 style="margin: 5px 0; color: #666;" id="printAuditDate"></h3>
+            </div>
 
-            <div class="flex-container" id="botFlexRowAudit" style="margin-bottom: 20px; align-items: stretch;">
+            <div style="text-align: right; margin-bottom: 15px;" class="no-print">
+                <button class="btn-primary" onclick="prepareAuditPrint()"
+                    style="padding: 10px 20px; font-size: 14px; background: #28a745;">🖨️ Download PDF Report</button>
+            </div>
+
+            <div class="flex-container no-print" id="botFlexRowAudit"
+                style="margin-bottom: 20px; align-items: stretch;">
                 <div class="card" id="auditSetupCard" style="flex: 1.2;">
                     <label>1. Branch Setup<span class="tooltip-icon">i<span class="tooltip-text">Select an existing
                                 branch or create a new one to log cash sales to.</span></span></label>
@@ -348,7 +358,7 @@
             </div>
 
             <div class="workspace">
-                <div class="card">
+                <div class="card no-print">
                     <h3 style="margin-top:0">1. Upload & View Receipt</h3>
                     <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 15px;">
                         <input type="file" id="uploadAudit" accept="image/*" style="flex: 1; font-size: 12px;">
@@ -364,14 +374,19 @@
                     </p>
                 </div>
 
-                <div class="card" id="auditVerificationCard">
-                    <div class="toggle-box" style="justify-content: space-between;">
+                <div class="card print-full-width" id="auditVerificationCard">
+                    <div class="toggle-box no-print" style="justify-content: space-between;">
                         <div style="display: flex; align-items: center;">
                             <h3 style="margin:0">2. Everyday Cash Sales</h3>
                         </div>
                         <button class="btn-reset" onclick="resetAuditForm()" style="margin-left: 10px;">Clear
                             Form</button>
                     </div>
+
+                    <!-- Print Title only for PDF -->
+                    <h3 class="print-only"
+                        style="display: none; border-bottom: 2px solid #ddd; padding-bottom: 5px; margin-bottom: 15px;">
+                        Cash Reconciliation</h3>
 
                     <div style="display: flex; gap: 15px; margin-top: 15px;">
                         <div style="flex:1"><label>Date</label><input type="date" id="auditDate"
@@ -395,23 +410,24 @@
                     <label style="margin-top:20px;">Individual Transactions (Punch List)</label>
                     <div id="sales-container-audit" class="sales-list">
                     </div>
-                    <button onclick="addInputAudit()"
+                    <button onclick="addInputAudit()" class="no-print"
                         style="margin-top:10px; cursor:pointer; font-size:11px; background: none; border: 1px solid #ccc; padding: 5px 10px; border-radius: 4px;">+
                         Add Sale Entry</button>
 
                     <label style="margin-top:20px;">Other Expenses</label>
                     <div style="display:flex; align-items:center;">
                         <span style="font-weight:bold; color:#777; margin-right:5px;" class="currency-label">$</span>
-                        <input type="number" id="auditExpenses" value="0.00" step="0.01" oninput="calcAudit()">
+                        <input type="number" id="auditExpenses" value="0.00" step="0.01" oninput="calcAudit()"
+                            class="print-input">
                     </div>
 
-                    <button class="btn-success" onclick="saveAuditEntry()" id="saveAuditBtn"
+                    <button class="btn-success no-print" onclick="saveAuditEntry()" id="saveAuditBtn"
                         style="margin-top: 25px;">Save / Update Audit Record</button>
                 </div>
             </div>
 
-            <div id="auditFiltersContainer"></div>
-            <div
+            <div id="auditFiltersContainer" class="no-print"></div>
+            <div class="no-print"
                 style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; margin-bottom: 10px;">
                 <div class="section-header" style="margin: 0;">Live Audit History</div>
                 <details style="position: relative;">
@@ -463,26 +479,19 @@
                     </div>
                 </details>
             </div>
-            <table id="auditDailyTable">
-                <thead>
-                    <tr>
-                        <th style="cursor: pointer;" onclick="toggleAuditSort('date')">Date <span id="auditSortIconDate"
-                                style="color:rgba(255, 255, 255, 0.5); font-size:10px;">▼</span></th>
-                        <th id="hdrBranchAudit" style="cursor: pointer;" onclick="toggleAuditSort('branch')">Branch
-                            <span id="auditSortIconBranch"
-                                style="color:rgba(255, 255, 255, 0.5); font-size:10px;">↕</span>
-                        </th>
-                        <th>Opening</th>
-                        <th>Closing</th>
-                        <th>Cash Out</th>
-                        <th>Sales</th>
-                        <th>Tips</th>
-                        <th>Other Exp</th>
-                        <th>Closing Bal</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="auditHistoryBody"></tbody>
+            style="color:rgba(255, 255, 255, 0.5); font-size:10px;">↕</span>
+            </th>
+            <th>Opening</th>
+            <th>Closing</th>
+            <th>Cash Out</th>
+            <th>Sales</th>
+            <th>Tips</th>
+            <th>Other Exp</th>
+            <th>Closing Bal</th>
+            <th>Actions</th>
+            </tr>
+            </thead>
+            <tbody id="auditHistoryBody"></tbody>
             </table>
         </div>
 

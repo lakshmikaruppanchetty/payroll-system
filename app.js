@@ -2900,3 +2900,22 @@ window.loadImage = async function (id) {
         try { let db = await getDB(); let req = db.transaction(STORE_NAME, "readonly").objectStore(STORE_NAME).get(id); req.onsuccess = () => res(req.result); req.onerror = () => res(null); } catch (e) { res(null); }
     });
 };
+
+window.prepareAuditPrint = function () {
+    const selDate = document.getElementById("auditDate").value;
+    const branch = document.getElementById("auditBranchName").value;
+    let titleStr = "";
+
+    if (selDate) {
+        titleStr += new Date(selDate + 'T00:00:00').toLocaleDateString();
+    } else {
+        titleStr += "Current View";
+    }
+
+    if (branch) {
+        titleStr += ` - ${branch}`;
+    }
+
+    document.getElementById("printAuditDate").innerText = titleStr;
+    window.print();
+};

@@ -1749,25 +1749,34 @@ window.exportToPDF = function () {
 
     doc.setFontSize(18);
     doc.text(isAuditActive ? "Cash & Tips Audit Report" : "Payroll & Shift Report", 14, currentY);
+    currentY += 8;
+
     doc.setFontSize(10);
     const dateStr = new Date().toLocaleDateString();
-    currentY += 6;
-    doc.text(`Generated on: ${dateStr}`, 14, currentY);
 
-    currentY += 6;
-    let filterText = "Filters Active: ";
     const curFilter = document.getElementById("viewFilter").value;
     const curBranchFilter = document.getElementById("branchFilter").value;
-
-    if (!isAuditActive && curFilter && curFilter !== "ALL") filterText += `Employee [${curFilter}]  `;
-    if (curBranchFilter && curBranchFilter !== "ALL") filterText += `Branch [${curBranchFilter}]  `;
     const sD = document.getElementById("filterStartDate").value;
     const eD = document.getElementById("filterEndDate").value;
-    if (sD || eD) filterText += `Date [${sD || 'Any'} to ${eD || 'Any'}]`;
-    if (filterText === "Filters Active: ") filterText += "None";
 
-    doc.text(filterText, 14, currentY);
-    currentY += 10;
+    if (!isAuditActive && curFilter && curFilter !== "ALL") {
+        doc.text(`Employee Name: ${curFilter}`, 14, currentY);
+        currentY += 6;
+    }
+    if (curBranchFilter && curBranchFilter !== "ALL") {
+        doc.text(`Branch: ${curBranchFilter}`, 14, currentY);
+        currentY += 6;
+    }
+
+    doc.text(`Generated on: ${dateStr}`, 14, currentY);
+    currentY += 6;
+
+    if (sD || eD) {
+        doc.text(`Pay Period: ${sD || 'Beginning'} to ${eD || 'Present'}`, 14, currentY);
+        currentY += 6;
+    }
+
+    currentY += 6;
 
     if (isAuditActive) {
         let curData = auditData.filter(d => {

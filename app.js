@@ -1730,7 +1730,7 @@ window.exportToExcel = function () {
 };
 
 window.exportToPDF = function () {
-    const isAuditActive = document.getElementById('auditView').classList.contains('active');
+    const isAuditActive = document.getElementById('auditView').classList.contains('active') || document.getElementById('auditReportsView').classList.contains('active');
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF(isAuditActive ? 'landscape' : 'portrait');
 
@@ -1748,19 +1748,18 @@ window.exportToPDF = function () {
     }
 
     doc.setFontSize(18);
-    doc.text("Payroll & Shift Report", 14, currentY);
+    doc.text(isAuditActive ? "Cash & Tips Audit Report" : "Payroll & Shift Report", 14, currentY);
     doc.setFontSize(10);
     const dateStr = new Date().toLocaleDateString();
     currentY += 6;
     doc.text(`Generated on: ${dateStr}`, 14, currentY);
 
-    // Add Active Filters to Header
     currentY += 6;
     let filterText = "Filters Active: ";
     const curFilter = document.getElementById("viewFilter").value;
     const curBranchFilter = document.getElementById("branchFilter").value;
 
-    if (curFilter && curFilter !== "ALL") filterText += `Employee [${curFilter}]  `;
+    if (!isAuditActive && curFilter && curFilter !== "ALL") filterText += `Employee [${curFilter}]  `;
     if (curBranchFilter && curBranchFilter !== "ALL") filterText += `Branch [${curBranchFilter}]  `;
     const sD = document.getElementById("filterStartDate").value;
     const eD = document.getElementById("filterEndDate").value;
@@ -1771,19 +1770,6 @@ window.exportToPDF = function () {
     currentY += 10;
 
     if (isAuditActive) {
-        doc.setFontSize(18);
-        doc.text("Cash & Tips Audit Report", 14, currentY);
-        doc.setFontSize(10);
-        currentY += 6;
-        doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, currentY);
-        currentY += 6;
-        let filterText = "Filters Active: ";
-        if (curBranchFilter && curBranchFilter !== "ALL") filterText += `Branch [${curBranchFilter}]  `;
-        if (sD || eD) filterText += `Date [${sD || 'Any'} to ${eD || 'Any'}]`;
-        if (filterText === "Filters Active: ") filterText += "None";
-        doc.text(filterText, 14, currentY);
-        currentY += 10;
-
         let curData = auditData.filter(d => {
             let ok = true;
             if (curBranchFilter && curBranchFilter !== "ALL") ok = d.branch === curBranchFilter;
@@ -1823,8 +1809,8 @@ window.exportToPDF = function () {
             head: tableHeaders,
             body: tableRows,
             theme: 'striped',
-            styles: { fontSize: 8 },
-            headStyles: { fillColor: [52, 58, 64] }
+            styles: { fontSize: 8, cellPadding: 3 },
+            headStyles: { fillColor: [52, 58, 64], textColor: 255, fontStyle: 'bold' }
         });
         doc.save('audit_report.pdf');
         return;

@@ -21,7 +21,7 @@ class TestPayrollManagement(unittest.TestCase):
         current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         self.file_path = f"file://{current_dir}/index.html"
         self.driver.get(self.file_path)
-        self.driver.execute_script("window.localStorage.setItem('onboardingComplete_v20', 'true');")
+        self.driver.execute_script("window.localStorage.clear(); window.localStorage.setItem('onboardingComplete_v20', 'true');")
         self.driver.refresh()
 
     def test_app_loads_successfully(self):
@@ -30,6 +30,10 @@ class TestPayrollManagement(unittest.TestCase):
     def test_end_to_end_employee_entry(self):
         driver = self.driver
         wait = WebDriverWait(driver, 10)
+        
+        # Reset to payroll tab in case Tour explicitly moved the hash state during early loads
+        driver.execute_script("switchTab('payroll')")
+        time.sleep(0.5)
         
         # Turn off settings to ensure DOM elements are fully visible without feature tabs
         driver.execute_script("document.getElementById('empName').value = 'Selenium Test User';")

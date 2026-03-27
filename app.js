@@ -121,7 +121,21 @@ window.onload = function () {
     if (!localStorage.getItem("onboardingComplete_v20")) {
         startUserTour();
     }
+
+    if (window.location.hash) {
+        let h = window.location.hash.substring(1);
+        if (['payroll', 'reports', 'audit', 'auditReports', 'settings', 'about'].includes(h)) {
+            switchTab(h, false);
+        }
+    }
 };
+
+window.addEventListener('hashchange', () => {
+    let h = window.location.hash.substring(1);
+    if (['payroll', 'reports', 'audit', 'auditReports', 'settings', 'about'].includes(h)) {
+        switchTab(h, false);
+    }
+});
 
 let currentTourStep = 0;
 const tourSteps = [
@@ -412,7 +426,9 @@ function clearLogo() {
     saveSettings();
 }
 
-function switchTab(tab) {
+function switchTab(tab, updateHash = true) {
+    if (updateHash) history.pushState(null, '', '#' + tab);
+
     document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.sidebar-menu li').forEach(el => el.classList.remove('active'));
     document.getElementById(tab + 'View').classList.add('active');

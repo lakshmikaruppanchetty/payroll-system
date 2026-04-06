@@ -581,11 +581,11 @@ window.selectRow = function (id, event) {
 
     if (window.loadImage) {
         window.loadImage(id).then(img => {
-            const preview = document.getElementById("preview-img");
-            const hint = document.getElementById("hint");
+            const preview = document.getElementById("pdfViewer");
             if (img && preview) {
-                preview.src = img; preview.style.display = "block";
-                if (hint) hint.style.display = "none";
+                preview.innerHTML = `<img src="${img}" style="max-width:100%; max-height:100%; border-radius:8px;"/>`;
+            } else if (preview) {
+                preview.innerHTML = `<p style="text-align:center; padding-top: 220px; color: #ccc;">Preview Punch Cards Here</p>`;
             }
         });
     }
@@ -656,9 +656,17 @@ window.addEntry = function () {
     if (editingId) masterData = masterData.filter(e => e.id !== editingId);
     masterData.push(entry); localStorage.setItem("payroll_v20", JSON.stringify(masterData));
 
-    let img = document.getElementById("preview-img");
-    if (img && img.style.display !== "none" && img.src && window.saveImage) {
-        window.saveImage(entry.id, img.src);
+    let viewer = document.getElementById("pdfViewer");
+    if (viewer && window.saveImage) {
+        let canvas = viewer.querySelector("canvas");
+        if (canvas) {
+            window.saveImage(entry.id, canvas.toDataURL());
+        } else {
+            let img = viewer.querySelector("img");
+            if (img && img.src) {
+                window.saveImage(entry.id, img.src);
+            }
+        }
     }
 
     // Automatically ensure the newly saved entry is visible in the current filter bounds
@@ -1505,10 +1513,25 @@ window.checkExistingShifts = function () {
         document.getElementById("hourlyRate").value = e.rate; document.getElementById("branchName").value = e.branch;
         editingId = e.id; document.getElementById("mainBtn").innerText = "Update Log";
         window.isDuplicating = false;
+
+        if (window.loadImage) {
+            window.loadImage(e.id).then(img => {
+                const preview = document.getElementById("pdfViewer");
+                if (img && preview) {
+                    preview.innerHTML = `<img src="${img}" style="max-width:100%; max-height:100%; border-radius:8px;"/>`;
+                } else if (preview) {
+                    preview.innerHTML = `<p style="text-align:center; padding-top: 220px; color: #ccc;">Preview Punch Cards Here</p>`;
+                }
+            });
+        }
     } else {
         if (editingId !== null) {
             editingId = null;
             document.getElementById("mainBtn").innerText = "Save / Update Log";
+            const preview = document.getElementById("pdfViewer");
+            if (preview) {
+                preview.innerHTML = `<p style="text-align:center; padding-top: 220px; color: #ccc;">Preview Punch Cards Here</p>`;
+            }
         }
     }
 };
@@ -1745,6 +1768,36 @@ window.exportToExcel = function () {
     }
 };
 
+window.formatShiftString = function (d, separator) {
+    const f = document.getElementById("clockToggle") ? document.getElementById("clockToggle").value : "24";
+    const formatTime = (t) => {
+        if (!t) return "";
+        if (f === "12") {
+            let [h, m] = t.split(':');
+            if (!h || !m) return t;
+            let hour = parseInt(h, 10);
+            let suffix = "AM";
+            if (hour >= 12) {
+                if (hour > 12) hour -= 12;
+                suffix = "PM";
+            } else if (hour === 0) {
+                hour = 12;
+            }
+            return `${hour}:${m} ${suffix}`;
+        }
+        return t;
+    };
+    let shifts = [];
+    if (d.s1s || d.s1e) shifts.push(d.s1e ? `${formatTime(d.s1s)} - ${formatTime(d.s1e)}` : formatTime(d.s1s));
+    if (d.s2s || d.s2e) shifts.push(d.s2e ? `${formatTime(d.s2s)} - ${formatTime(d.s2e)}` : formatTime(d.s2s));
+    if (d.s3s || d.s3e) shifts.push(d.s3e ? `${formatTime(d.s3s)} - ${formatTime(d.s3e)}` : formatTime(d.s3s));
+    if (appSettings.showExtendedShifts) {
+        if (d.s4s || d.s4e) shifts.push(d.s4e ? `${formatTime(d.s4s)} - ${formatTime(d.s4e)}` : formatTime(d.s4s));
+        if (d.s5s || d.s5e) shifts.push(d.s5e ? `${formatTime(d.s5s)} - ${formatTime(d.s5e)}` : formatTime(d.s5s));
+    }
+    return shifts.join(separator);
+};
+
 window.exportToPDF = function () {
     const isAuditActive = document.getElementById('auditView').classList.contains('active') || document.getElementById('auditReportsView').classList.contains('active');
     const { jsPDF } = window.jspdf;
@@ -1863,7 +1916,7 @@ window.exportToPDF = function () {
         d.date,
         d.name,
         d.branch,
-        `${d.s1s}-${d.s1e}${d.s2s ? '\n' + d.s2s + '-' + d.s2e : ''}${d.s3s ? '\n' + d.s3s + '-' + d.s3e : ''}${d.s4s && appSettings.showExtendedShifts ? '\n' + d.s4s + '-' + d.s4e : ''}${d.s5s && appSettings.showExtendedShifts ? '\n' + d.s5s + '-' + d.s5e : ''}`,
+        window.formatShiftString(d, '\n'),
         decToT(d.total),
         `${getCurrencySymbol()}${d.rate}`,
         `${getCurrencySymbol()}${d.pay}`
@@ -1875,6 +1928,7 @@ window.exportToPDF = function () {
         body: tableRows,
         theme: 'striped',
         styles: { fontSize: 8 },
+        columnStyles: { 3: { halign: 'left' } },
         headStyles: { fillColor: [52, 58, 64] }
     });
 
@@ -2005,12 +2059,7 @@ function parseTimesAndDate(text) {
 }
 
 function applyAutofill(matches, dateStr, remainingRows = 0) {
-    let f = document.getElementById("clockToggle") ? document.getElementById("clockToggle").value : "24";
-    if (f !== "24") {
-        if (document.getElementById("clockToggle")) document.getElementById("clockToggle").value = "24";
-        if (document.getElementById("clockToggleTop")) document.getElementById("clockToggleTop").value = "24";
-        window.toggleClockFormat();
-    }
+    // Clock UI format is retained. Values are always assigned in 24h format below, which works natively for both UI types.
 
     if (dateStr) {
         document.getElementById("workDate").value = dateStr;
@@ -2207,7 +2256,7 @@ window.generatePayStub = function (employeeName) {
     const tableHeaders = [["Date", "Shifts", "Daily Hrs", "Rate", "Daily Pay"]];
     const tableRows = ent.map(d => [
         d.date,
-        `${d.s1s}-${d.s1e}${d.s2s ? ', ' + d.s2s + '-' + d.s2e : ''}${d.s3s ? ', ' + d.s3s + '-' + d.s3e : ''}${d.s4s && appSettings.showExtendedShifts ? ', ' + d.s4s + '-' + d.s4e : ''}${d.s5s && appSettings.showExtendedShifts ? ', ' + d.s5s + '-' + d.s5e : ''}`,
+        window.formatShiftString(d, ', '),
         decToT(d.total),
         `${getCurrencySymbol()}${d.rate}`,
         `${getCurrencySymbol()}${d.pay}`
@@ -2219,6 +2268,7 @@ window.generatePayStub = function (employeeName) {
         body: tableRows,
         theme: 'striped',
         styles: { fontSize: 10 },
+        columnStyles: { 1: { halign: 'left' } },
         headStyles: { fillColor: [40, 167, 69] }
     });
 

@@ -626,6 +626,33 @@
                             style="border-radius: 5px; padding: 8px 15px;">Remove
                             Logo</button>
                     </div>
+                    <hr style="margin: 15px 0;">
+                    <h3 style="margin-top: 0;">Branch Logos</h3>
+                    <p style="font-size: 12px; color: #666; margin-top: 0;">Upload distinct logos for each branch to
+                        dynamically show on their respective PDF reports.</p>
+                    <div class="toggle-box" style="padding-top: 5px; margin-bottom: 15px;">
+                        <label class="switch">
+                            <input type="checkbox" id="toggleBranchLogos" onchange="saveSettings()">
+                            <span class="slider"></span>
+                        </label>
+                        <label for="toggleBranchLogos" style="margin: 0; font-size: 14px; cursor: pointer;">Enable
+                            Branch Logos</label>
+                    </div>
+                    <div id="branchLogoUploadSection">
+                        <select id="branchLogoSelect" onchange="loadBranchLogo()"
+                            style="margin-bottom: 10px; padding: 6px; width: 100%;">
+                            <option value="">-- Select Branch --</option>
+                        </select>
+                        <div id="branchLogoPreviewContainer"
+                            style="display:none; text-align:center; margin-bottom: 10px;">
+                            <img id="branchLogoPreview"
+                                style="max-height: 80px; border-radius: 8px; border: 1px solid #ccc;" />
+                        </div>
+                        <input type="file" id="branchLogoUpload" accept="image/*" onchange="handleBranchLogoUpload()"
+                            style="margin-bottom: 10px;">
+                        <button class="btn-danger-x" onclick="clearBranchLogo()"
+                            style="border-radius: 5px; padding: 8px 15px;">Remove Logo</button>
+                    </div>
                 </div>
 
                 <div class="card" id="featureTogglesCard" style="flex: 1; margin: 0;">
@@ -690,6 +717,32 @@
                         </label>
                         <label for="toggleCsv" style="margin: 0; font-size: 14px; cursor: pointer;">Enable Import CSV
                             File</label>
+                    </div>
+                    <hr style="margin: 15px 0;">
+                    <h4 style="margin: 0 0 10px 0; color: #555;">Cash & Tips Features</h4>
+                    <div class="toggle-box" style="padding-top: 5px;">
+                        <label class="switch">
+                            <input type="checkbox" id="toggleAuditCsv" onchange="saveSettings()">
+                            <span class="slider"></span>
+                        </label>
+                        <label for="toggleAuditCsv" style="margin: 0; font-size: 14px; cursor: pointer;">Enable Audit
+                            Import CSV</label>
+                    </div>
+                    <div class="toggle-box" style="padding-top: 5px;">
+                        <label class="switch">
+                            <input type="checkbox" id="toggleAuditPdf" onchange="saveSettings()">
+                            <span class="slider"></span>
+                        </label>
+                        <label for="toggleAuditPdf" style="margin: 0; font-size: 14px; cursor: pointer;">Enable Upload
+                            Receipt (PDF/Image)</label>
+                    </div>
+                    <div class="toggle-box" style="padding-top: 5px;">
+                        <label class="switch">
+                            <input type="checkbox" id="toggleAuditExportPdf" onchange="saveSettings()">
+                            <span class="slider"></span>
+                        </label>
+                        <label for="toggleAuditExportPdf" style="margin: 0; font-size: 14px; cursor: pointer;">Enable
+                            Audit Generate PDF</label>
                     </div>
                 </div>
             </div>

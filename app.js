@@ -8,7 +8,12 @@ appSettings.showBranchSummary = appSettings.showBranchSummary ?? false;
 appSettings.showPdf = appSettings.showPdf ?? true;
 appSettings.showCsv = appSettings.showCsv ?? true;
 appSettings.showExportPdf = appSettings.showExportPdf ?? true;
+appSettings.showAuditCsv = appSettings.showAuditCsv ?? true;
+appSettings.showAuditPdf = appSettings.showAuditPdf ?? true;
+appSettings.showAuditExportPdf = appSettings.showAuditExportPdf ?? true;
 appSettings.showLogo = appSettings.showLogo ?? false;
+appSettings.showBranchLogos = appSettings.showBranchLogos ?? false;
+appSettings.branchLogos = appSettings.branchLogos || {};
 appSettings.showExtendedShifts = appSettings.showExtendedShifts ?? false;
 appSettings.companyLogo = appSettings.companyLogo ?? null;
 appSettings.minRate = appSettings.minRate ?? 15;
@@ -290,7 +295,11 @@ function saveSettings() {
     appSettings.showPdf = document.getElementById("togglePdf").checked;
     appSettings.showCsv = document.getElementById("toggleCsv").checked;
     appSettings.showExportPdf = document.getElementById("toggleExportPdf").checked;
+    appSettings.showAuditCsv = document.getElementById("toggleAuditCsv").checked;
+    appSettings.showAuditPdf = document.getElementById("toggleAuditPdf").checked;
+    appSettings.showAuditExportPdf = document.getElementById("toggleAuditExportPdf").checked;
     appSettings.showLogo = document.getElementById("toggleLogo").checked;
+    appSettings.showBranchLogos = document.getElementById("toggleBranchLogos").checked;
     appSettings.showExtendedShifts = document.getElementById("toggleExtendedShifts").checked;
     appSettings.ocrEngine = document.getElementById("ocrEngineSelect").value;
     appSettings.llmApiKey = document.getElementById("llmApiKey").value;
@@ -319,6 +328,26 @@ function applySettings() {
     document.getElementById("branchSummarySection").style.display = appSettings.showBranchSummary ? "" : "none";
     document.getElementById("pdfCard").style.display = appSettings.showPdf ? "" : "none";
     document.getElementById("csvCard").style.display = appSettings.showCsv ? "" : "none";
+
+    let auditCsvCard = document.getElementById("auditCsvCard");
+    if (auditCsvCard) auditCsvCard.style.display = appSettings.showAuditCsv ? "" : "none";
+
+    let auditUploadCard = document.getElementById("uploadAudit")?.closest('.card');
+    if (auditUploadCard) auditUploadCard.style.display = appSettings.showAuditPdf ? "" : "none";
+
+    let auditVerificationCard = document.getElementById("auditVerificationCard");
+    let workspaceGrid = document.querySelector(".workspace");
+    if (workspaceGrid && auditVerificationCard) {
+        if (!appSettings.showAuditPdf) {
+            workspaceGrid.style.gridTemplateColumns = "1fr";
+            auditVerificationCard.style.maxWidth = "800px";
+            auditVerificationCard.style.margin = "0 auto";
+        } else {
+            workspaceGrid.style.gridTemplateColumns = window.innerWidth <= 768 ? "1fr" : "1fr 1fr";
+            auditVerificationCard.style.maxWidth = "none";
+            auditVerificationCard.style.margin = "0";
+        }
+    }
 
     const topRow = document.getElementById("topFlexRow");
     const botRow = document.getElementById("botFlexRow");
@@ -352,8 +381,22 @@ function applySettings() {
     document.getElementById("togglePdf").checked = appSettings.showPdf;
     document.getElementById("toggleCsv").checked = appSettings.showCsv;
     document.getElementById("toggleExportPdf").checked = appSettings.showExportPdf;
-    document.getElementById("btnExportPdf").style.display = appSettings.showExportPdf ? "" : "none";
+    document.getElementById("toggleAuditCsv").checked = appSettings.showAuditCsv;
+    document.getElementById("toggleAuditPdf").checked = appSettings.showAuditPdf;
+    document.getElementById("toggleAuditExportPdf").checked = appSettings.showAuditExportPdf;
+
+    let activeTab = document.querySelector('.sidebar-menu li.active')?.id;
+    if (activeTab === 'menuAudit' || activeTab === 'menuAuditReports') {
+        document.getElementById("btnExportPdf").style.display = appSettings.showAuditExportPdf ? "" : "none";
+    } else {
+        document.getElementById("btnExportPdf").style.display = appSettings.showExportPdf ? "" : "none";
+    }
+
     document.getElementById("toggleLogo").checked = appSettings.showLogo;
+    document.getElementById("toggleBranchLogos").checked = appSettings.showBranchLogos;
+
+    let branchLogoUploadSection = document.getElementById("branchLogoUploadSection");
+    if (branchLogoUploadSection) branchLogoUploadSection.style.display = appSettings.showBranchLogos ? "block" : "none";
 
     if (document.getElementById("toggleExtendedShifts")) {
         document.getElementById("toggleExtendedShifts").checked = appSettings.showExtendedShifts;
@@ -426,6 +469,47 @@ function clearLogo() {
     saveSettings();
 }
 
+window.loadBranchLogo = function () {
+    const sel = document.getElementById("branchLogoSelect").value;
+    const previewContainer = document.getElementById("branchLogoPreviewContainer");
+    const previewImg = document.getElementById("branchLogoPreview");
+
+    if (sel && appSettings.branchLogos && appSettings.branchLogos[sel]) {
+        previewImg.src = appSettings.branchLogos[sel];
+        previewContainer.style.display = "block";
+    } else {
+        previewImg.src = "";
+        previewContainer.style.display = "none";
+    }
+};
+
+window.handleBranchLogoUpload = function () {
+    const sel = document.getElementById("branchLogoSelect").value;
+    if (!sel) return alert("Select a branch first.");
+    const file = document.getElementById("branchLogoUpload").files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            appSettings.branchLogos = appSettings.branchLogos || {};
+            appSettings.branchLogos[sel] = e.target.result;
+            saveSettings();
+            loadBranchLogo();
+        };
+        reader.readAsDataURL(file);
+    }
+};
+
+window.clearBranchLogo = function () {
+    const sel = document.getElementById("branchLogoSelect").value;
+    if (!sel) return alert("Select a branch first.");
+    if (appSettings.branchLogos && appSettings.branchLogos[sel]) {
+        delete appSettings.branchLogos[sel];
+        saveSettings();
+        loadBranchLogo();
+        document.getElementById("branchLogoUpload").value = "";
+    }
+};
+
 function switchTab(tab, updateHash = true) {
     if (updateHash) history.pushState(null, '', '#' + tab);
 
@@ -463,6 +547,13 @@ function switchTab(tab, updateHash = true) {
         if (branchVal && document.getElementById("branchFilter")) document.getElementById("branchFilter").value = branchVal;
         if (dateVal && document.getElementById("dateFilterPreset")) document.getElementById("dateFilterPreset").value = dateVal;
         if (clockVal && document.getElementById("clockToggle")) document.getElementById("clockToggle").value = clockVal;
+
+        let pActiveTab = document.querySelector('.sidebar-menu li.active')?.id;
+        if (pActiveTab === 'menuAudit' || pActiveTab === 'menuAuditReports') {
+            document.getElementById("btnExportPdf").style.display = appSettings.showAuditExportPdf ? "" : "none";
+        } else {
+            document.getElementById("btnExportPdf").style.display = appSettings.showExportPdf ? "" : "none";
+        }
     }
 
     setTimeout(() => renderAll(), 50); // delay to let display:block apply fully
@@ -1242,22 +1333,39 @@ window.renderAll = function () {
     const filterEmps = [...new Set(masterData.filter(e => !vBranch || vBranch === "ALL" || e.branch === vBranch).map(e => e.name))].sort();
     const isAuditActive = (document.getElementById('auditView') && document.getElementById('auditView').classList.contains('active')) || (document.getElementById('auditReportsView') && document.getElementById('auditReportsView').classList.contains('active'));
     const effectiveVEmp = isAuditActive ? "ALL" : vEmp;
-    const filterBranches = [...new Set([
-        ...masterData.filter(e => !effectiveVEmp || effectiveVEmp === "ALL" || e.name === effectiveVEmp).map(e => e.branch),
-        ...(typeof auditData !== 'undefined' && (!effectiveVEmp || effectiveVEmp === "ALL") ? auditData.map(e => e.branch) : [])
-    ])].sort();
+
+    let filterBranches = [];
+    if (isAuditActive) {
+        if (typeof auditData !== 'undefined') {
+            filterBranches = [...new Set(auditData.map(e => e.branch))].sort();
+        }
+    } else {
+        filterBranches = [...new Set(masterData.filter(e => !effectiveVEmp || effectiveVEmp === "ALL" || e.name === effectiveVEmp).map(e => e.branch))].sort();
+    }
 
     emps.forEach(n => { eS.innerHTML += `<option value="${n}">${n}</option>`; });
     filterEmps.forEach(n => { document.getElementById("viewFilter").innerHTML += `<option value="${n}">${n}</option>`; });
 
     bS.innerHTML = '<option value="__SELECT__">-- Select Branch --</option>'; document.getElementById("branchFilter").innerHTML = '<option value="ALL">All Branches</option>';
+
+    const payrollBranches = [...new Set(masterData.map(e => e.branch))].sort();
+    const auditBranches = typeof auditData !== 'undefined' ? [...new Set(auditData.map(e => e.branch))].sort() : [];
+
     const aBS = document.getElementById("auditBranchSelectDropdown");
-    if (aBS) { const cabS = aBS.value; aBS.innerHTML = '<option value="__SELECT__">-- Select Branch --</option>'; branches.forEach(b => { aBS.innerHTML += `<option value="${b}">${b || '[Unassigned]'}</option>`; }); aBS.value = (cabS === "ALL" || !cabS) ? "__SELECT__" : cabS; }
+    if (aBS) { const cabS = aBS.value; aBS.innerHTML = '<option value="__SELECT__">-- Select Branch --</option>'; auditBranches.forEach(b => { aBS.innerHTML += `<option value="${b}">${b || '[Unassigned]'}</option>`; }); aBS.value = (cabS === "ALL" || !cabS) ? "__SELECT__" : cabS; }
 
     const abS = document.getElementById("auditBulkBranchSelect");
-    if (abS) { const curAb = abS.value; abS.innerHTML = '<option value="__SELECT__">-- Target Branch --</option><option value="ALL">ALL Branches</option>'; branches.forEach(b => { abS.innerHTML += `<option value="${b}">${b || '[Unassigned]'}</option>`; }); abS.value = (curAb && ["ALL", ...branches].includes(curAb)) ? curAb : "__SELECT__"; }
+    if (abS) { const curAb = abS.value; abS.innerHTML = '<option value="__SELECT__">-- Target Branch --</option><option value="ALL">ALL Branches</option>'; auditBranches.forEach(b => { abS.innerHTML += `<option value="${b}">${b || '[Unassigned]'}</option>`; }); abS.value = (curAb && ["ALL", ...auditBranches].includes(curAb)) ? curAb : "__SELECT__"; }
 
-    branches.forEach(b => { bS.innerHTML += `<option value="${b}">${b}</option>`; });
+    const blS = document.getElementById("branchLogoSelect");
+    if (blS) {
+        const cBl = blS.value;
+        blS.innerHTML = '<option value="">-- Select Branch --</option>';
+        branches.forEach(b => { blS.innerHTML += `<option value="${b}">${b || '[Unassigned]'}</option>`; });
+        if (cBl && ["", ...branches].includes(cBl)) blS.value = cBl;
+    }
+
+    payrollBranches.forEach(b => { bS.innerHTML += `<option value="${b}">${b}</option>`; });
     filterBranches.forEach(b => { document.getElementById("branchFilter").innerHTML += `<option value="${b}">${b}</option>`; });
 
     if (emps.length === 1) {
@@ -1806,10 +1914,16 @@ window.exportToPDF = function () {
     // Header section
     let currentY = 15;
 
+    const exportBranchFilter = document.getElementById("branchFilter").value;
+    let logoToUse = appSettings.companyLogo;
+    if (appSettings.showBranchLogos && exportBranchFilter !== "ALL" && appSettings.branchLogos && appSettings.branchLogos[exportBranchFilter]) {
+        logoToUse = appSettings.branchLogos[exportBranchFilter];
+    }
+
     // Add Logo if it exists in settings
-    if (appSettings.companyLogo) {
+    if (logoToUse) {
         try {
-            doc.addImage(appSettings.companyLogo, 'PNG', 14, currentY, 40, 40, '', 'FAST');
+            doc.addImage(logoToUse, 'PNG', 14, currentY, 40, 40, '', 'FAST');
             currentY += 45;
         } catch (e) {
             console.error("Failed to inject logo into PDF:", e);
@@ -2225,9 +2339,14 @@ window.generatePayStub = function (employeeName) {
 
     let currentY = 15;
 
-    if (appSettings.companyLogo) {
+    let logoToUse = appSettings.companyLogo;
+    if (appSettings.showBranchLogos && appSettings.branchLogos && appSettings.branchLogos[ent[0].branch]) {
+        logoToUse = appSettings.branchLogos[ent[0].branch];
+    }
+
+    if (logoToUse) {
         try {
-            doc.addImage(appSettings.companyLogo, 'PNG', 14, currentY, 40, 40, '', 'FAST');
+            doc.addImage(logoToUse, 'PNG', 14, currentY, 40, 40, '', 'FAST');
             currentY += 45;
         } catch (e) {
             console.error("Logo inject failed:", e);

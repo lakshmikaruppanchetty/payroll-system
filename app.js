@@ -1224,7 +1224,20 @@ window.checkExistingAudit = function () {
     const branch = document.getElementById("auditBranchName").value;
     const date = document.getElementById("auditDate").value;
     if (!branch || !date) return;
+
     const e = auditData.find(x => x.branch === branch && x.date === date);
+    if (!e && !editingAuditId) {
+        const previousEntries = auditData.filter(x => x.branch === branch && x.date < date).sort((a, b) => b.date.localeCompare(a.date));
+        if (previousEntries.length > 0 && document.getElementById("auditOpening").value === "") {
+            const pe = previousEntries[0];
+            const p_o = parseFloat(pe.opening) || 0;
+            const p_ex = parseFloat(pe.expenses) || 0;
+            const p_added = parseFloat(pe.added) || 0;
+            const p_net = p_o - p_ex + p_added;
+            document.getElementById("auditOpening").value = p_net.toFixed(2);
+        }
+    }
+
     if (e) {
         if (editingAuditId && editingAuditId === e.id) return;
         if (document.getElementById("auditOpening").value !== "" && !editingAuditId) {
@@ -1234,6 +1247,7 @@ window.checkExistingAudit = function () {
         document.getElementById('auditDate').value = e.date;
         document.getElementById('auditBranchName').value = e.branch || "";
         document.getElementById('auditOpening').value = e.opening || "";
+        document.getElementById('auditAdded').value = e.added || "0.00";
         document.getElementById('auditClosing').value = e.closing || "";
         document.getElementById('auditExpenses').value = e.expenses || "0";
 
@@ -1258,6 +1272,7 @@ window.checkExistingAudit = function () {
     } else {
         if (editingAuditId !== null) {
             document.getElementById('auditOpening').value = "";
+            document.getElementById('auditAdded').value = "0.00";
             document.getElementById('auditClosing').value = "";
             document.getElementById('auditExpenses').value = "0.00";
             document.getElementById('sales-container-audit').innerHTML = "";
@@ -1766,7 +1781,7 @@ window.exportToExcel = function () {
     const isAuditActive = document.getElementById('auditView').classList.contains('active') || document.getElementById('auditReportsView').classList.contains('active');
 
     if (isAuditActive) {
-        let csv = "Date,Branch,Opening Balance,Closing Balance,Cash Out,Sales Total,Tips,Other Expenses,Net Final,Individual Transactions\n";
+        let csv = "Date,Branch,Opening Balance,Added to Till,Closing Balance,Cash Out,Sales Total,Tips,Other Expenses,Net Final,Individual Transactions\n";
         const curBranchFilter = document.getElementById("branchFilter").value;
 
         let curData = auditData.filter(d => {
@@ -1785,17 +1800,18 @@ window.exportToExcel = function () {
 
         curData.forEach(d => {
             const o = parseFloat(d.opening) || 0;
+            const added = parseFloat(d.added) || 0;
             const c = parseFloat(d.closing) || 0;
             const ex = parseFloat(d.expenses) || 0;
             const sTotal = (d.sales || []).reduce((sum, v) => sum + (parseFloat(v) || 0), 0);
             const cout = c - o;
             const tips = cout - sTotal;
-            const net = c - cout - ex;
+            const net = c - cout - ex + added;
             const indivSales = (d.sales || []).join("|");
 
             tCashOut += cout; tSales += sTotal; tTips += tips; tExp += ex; tNet += net;
 
-            csv += `"${fmtD(d.date)}","${d.branch || ''}",${o.toFixed(2)},${c.toFixed(2)},${cout.toFixed(2)},${sTotal.toFixed(2)},${tips.toFixed(2)},${ex.toFixed(2)},${net.toFixed(2)},"${indivSales}"\n`;
+            csv += `"${fmtD(d.date)}","${d.branch || ''}",${o.toFixed(2)},${added.toFixed(2)},${c.toFixed(2)},${cout.toFixed(2)},${sTotal.toFixed(2)},${tips.toFixed(2)},${ex.toFixed(2)},${net.toFixed(2)},"${indivSales}"\n`;
         });
 
         csv += `\n"TOTALS",,"N/A","N/A",${tCashOut.toFixed(2)},${tSales.toFixed(2)},${tTips.toFixed(2)},"N/A","N/A","N/A"\n`;
@@ -1974,19 +1990,21 @@ window.exportToPDF = function () {
 
         if (curData.length === 0) return alert("No audit data to export!");
 
-        const tableHeaders = [["Date", "Branch", "Opening", "Closing", "Cash Out", "Sales", "Tips", "Expenses", "Closing Bal"]];
+        const tableHeaders = [["Date", "Branch", "Opening", "Added", "Closing", "Cash Out", "Sales", "Tips", "Expenses", "Closing Bal"]];
         const tableRows = curData.map(d => {
             const o = parseFloat(d.opening) || 0;
+            const added = parseFloat(d.added) || 0;
             const c = parseFloat(d.closing) || 0;
             const ex = parseFloat(d.expenses) || 0;
             const sTotal = (d.sales || []).reduce((sum, v) => sum + (parseFloat(v) || 0), 0);
             const cout = c - o;
             const tips = cout - sTotal;
-            const net = c - cout - ex;
+            const net = c - cout - ex + added;
             return [
                 d.date,
                 d.branch,
                 `${getCurrencySymbol()}${o.toFixed(2)}`,
+                `${getCurrencySymbol()}${added.toFixed(2)}`,
                 `${getCurrencySymbol()}${c.toFixed(2)}`,
                 `${getCurrencySymbol()}${cout.toFixed(2)}`,
                 `${getCurrencySymbol()}${sTotal.toFixed(2)}`,
@@ -2611,6 +2629,7 @@ function removeInputAudit(btn) {
 
 function calcAudit() {
     const open = parseFloat(document.getElementById('auditOpening').value) || 0;
+    const added = parseFloat(document.getElementById('auditAdded').value) || 0;
     const close = parseFloat(document.getElementById('auditClosing').value) || 0;
     const exp = parseFloat(document.getElementById('auditExpenses').value) || 0;
 
@@ -2626,13 +2645,17 @@ function calcAudit() {
     if (Math.abs(tips) < 0.005) tips = 0;
     document.getElementById('st-tips').innerHTML = `<span class="currency-label">${sym}</span>${tips.toFixed(2)}`;
     document.getElementById('st-tips').style.color = tips === 0 ? "#777" : (tips < 0 ? "#e74c3c" : "#27ae60");
-    document.getElementById('st-final').innerHTML = `<span class="currency-label">${sym}</span>${(close - cashOut - exp).toFixed(2)}`;
+
+    // Net (Final Closing Balance to carry over) = close - cashOut - exp + added = open - exp + added
+    const net = close - cashOut - exp + added;
+    document.getElementById('st-final').innerHTML = `<span class="currency-label">${sym}</span>${net.toFixed(2)}`;
 }
 
 function resetAuditForm() {
     document.getElementById('auditDate').value = "";
     document.getElementById('auditBranchName').value = "";
     document.getElementById('auditOpening').value = "";
+    document.getElementById('auditAdded').value = "0.00";
     document.getElementById('auditClosing').value = "";
     document.getElementById('sales-container-audit').innerHTML = "";
     document.getElementById('auditExpenses').value = "0.00";
@@ -2671,6 +2694,7 @@ window.saveAuditEntry = function () {
         date: date,
         branch: branch,
         opening: document.getElementById('auditOpening').value,
+        added: document.getElementById('auditAdded').value || "0",
         closing: document.getElementById('auditClosing').value,
         sales: Array.from(document.querySelectorAll('.sale-in-audit')).map(e => e.value),
         expenses: document.getElementById('auditExpenses').value
@@ -2711,6 +2735,7 @@ window.editAuditEntry = function (id) {
     document.getElementById('auditDate').value = entry.date;
     document.getElementById('auditBranchName').value = entry.branch || "";
     document.getElementById('auditOpening').value = entry.opening || "";
+    document.getElementById('auditAdded').value = entry.added || "0.00";
     document.getElementById('auditClosing').value = entry.closing || "";
     document.getElementById('auditExpenses').value = entry.expenses || "0";
 
@@ -2795,13 +2820,14 @@ window.renderAuditData = function () {
 
     display.forEach(a => {
         const o = parseFloat(a.opening) || 0;
+        const added = parseFloat(a.added) || 0;
         const c = parseFloat(a.closing) || 0;
         const ex = parseFloat(a.expenses) || 0;
         const sTotal = (a.sales || []).reduce((sum, v) => sum + (parseFloat(v) || 0), 0);
         const cout = c - o;
         let tips = cout - sTotal;
         if (Math.abs(tips) < 0.005) tips = 0;
-        const net = c - cout - ex;
+        const net = c - cout - ex + added;
 
         tCashOut += cout; tSales += sTotal; tTips += tips; tExp += ex; tNet += net;
 
@@ -2815,6 +2841,7 @@ window.renderAuditData = function () {
             <td>${d}</td>
             ${brCell}
             <td>${sym}${o.toFixed(2)}</td>
+            <td>${sym}${added.toFixed(2)}</td>
             <td>${sym}${c.toFixed(2)}</td>
             <td>${sym}${cout.toFixed(2)}</td>
             <td>${sym}${sTotal.toFixed(2)}</td>
@@ -2822,8 +2849,8 @@ window.renderAuditData = function () {
             <td>${sym}${ex.toFixed(2)}</td>
             <td style="font-weight:bold">${sym}${net.toFixed(2)}</td>
             <td>
-                <button class="btn-edit-small" onclick="editAuditEntry(${a.id})">Edit</button>
-                <button class="btn-danger-x" onclick="deleteAuditEntry(${a.id})">×</button>
+                <button class="btn-edit-small" onclick="editAuditEntry('${a.id}')">Edit</button>
+                <button class="btn-danger-x" onclick="deleteAuditEntry('${a.id}')">×</button>
             </td>
         </tr>`;
     });
@@ -2833,7 +2860,7 @@ window.renderAuditData = function () {
         let tTipsColor = tTips === 0 ? '#777' : (tTips < 0 ? '#e74c3c' : '#27ae60');
 
         body.innerHTML += `<tr class="totals-row" style="background:#eaeff5; font-weight:bold;">
-            <td colspan="${appSettings.showBranch ? 4 : 3}" style="text-align:right">Audit Totals:</td>
+            <td colspan="${appSettings.showBranch ? 5 : 4}" style="text-align:right">Audit Totals:</td>
             <td>${sym}${tCashOut.toFixed(2)}</td>
             <td>${sym}${tSales.toFixed(2)}</td>
             <td style="color:${tTipsColor}">${sym}${tTips.toFixed(2)}</td>

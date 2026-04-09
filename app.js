@@ -35,6 +35,13 @@ let summarySortAsc = true;
 let branchSortAsc = true;
 let auditBranchSortAsc = true;
 
+window.formatDisplayDate = function(dateStr) {
+    if (!dateStr || !dateStr.includes('-')) return dateStr;
+    const p = dateStr.split('-');
+    if (p.length === 3 && p[0].length === 4) return `${p[1]}-${p[2]}-${p[0]}`;
+    return dateStr;
+};
+
 window.getCurrencySymbol = function () {
     let pref = localStorage.getItem("preferredCurrency_v20");
     if (!pref) return "$";
@@ -341,7 +348,7 @@ function applySettings() {
         if (!appSettings.showAuditPdf) {
             workspaceGrid.style.gridTemplateColumns = "1fr";
             auditVerificationCard.style.maxWidth = "800px";
-            auditVerificationCard.style.margin = "0 auto";
+            auditVerificationCard.style.margin = "0";
         } else {
             workspaceGrid.style.gridTemplateColumns = window.innerWidth <= 768 ? "1fr" : "1fr 1fr";
             auditVerificationCard.style.maxWidth = "none";
@@ -1777,7 +1784,7 @@ window.clearAllTablesSecure = function () {
 };
 
 window.exportToExcel = function () {
-    const fmtD = (dt) => dt;
+    const fmtD = (dt) => window.formatDisplayDate(dt);
     const isAuditActive = document.getElementById('auditView').classList.contains('active') || document.getElementById('auditReportsView').classList.contains('active');
 
     if (isAuditActive) {
@@ -1971,9 +1978,11 @@ window.exportToPDF = function () {
     currentY += 6;
 
     if (sD || eD) {
-        doc.text(`Pay Period: ${sD || 'Beginning'} to ${eD || 'Present'}`, 14, currentY);
-        currentY += 6;
+        doc.text(`${isAuditActive ? 'Audit Period' : 'Pay Period'}: ${window.formatDisplayDate(sD) || 'Beginning'} to ${window.formatDisplayDate(eD) || 'Present'}`, 14, currentY);
+    } else {
+        doc.text(`${isAuditActive ? 'Audit Period' : 'Pay Period'}: All Time`, 14, currentY);
     }
+    currentY += 6;
 
     currentY += 6;
 
@@ -1990,7 +1999,7 @@ window.exportToPDF = function () {
 
         if (curData.length === 0) return alert("No audit data to export!");
 
-        const tableHeaders = [["Date", "Branch", "Opening", "Added", "Closing", "Cash Out", "Sales", "Tips", "Expenses", "Closing Bal"]];
+        const tableHeaders = [["Date", "Branch", "Opening", "Added", "Actual Closeout", "Cash Out", "Sales", "Tips", "Expenses", "Closing Bal", "Closing"]];
         const tableRows = curData.map(d => {
             const o = parseFloat(d.opening) || 0;
             const added = parseFloat(d.added) || 0;
@@ -2000,8 +2009,14 @@ window.exportToPDF = function () {
             const cout = c - o;
             const tips = cout - sTotal;
             const net = c - cout - ex + added;
+            
+            const futureRecs = auditData.filter(item => item.branch === d.branch && item.date > d.date);
+            futureRecs.sort((a, b) => a.date.localeCompare(b.date));
+            const nextOp = futureRecs.length > 0 ? (parseFloat(futureRecs[0].opening) || 0) : null;
+            const closingColText = nextOp !== null ? `${getCurrencySymbol()}${nextOp.toFixed(2)}` : '-';
+
             return [
-                d.date,
+                window.formatDisplayDate(d.date),
                 d.branch,
                 `${getCurrencySymbol()}${o.toFixed(2)}`,
                 `${getCurrencySymbol()}${added.toFixed(2)}`,
@@ -2010,7 +2025,8 @@ window.exportToPDF = function () {
                 `${getCurrencySymbol()}${sTotal.toFixed(2)}`,
                 `${getCurrencySymbol()}${tips.toFixed(2)}`,
                 `${getCurrencySymbol()}${ex.toFixed(2)}`,
-                `${getCurrencySymbol()}${net.toFixed(2)}`
+                `${getCurrencySymbol()}${net.toFixed(2)}`,
+                closingColText
             ];
         });
 
@@ -2045,7 +2061,7 @@ window.exportToPDF = function () {
     // 1. Generate Main Shift Log Table
     const tableHeaders = [["Date", "Employee", "Branch", "Shift Timings", "Total Hrs", "Rate", "Total Pay"]];
     const tableRows = curData.map(d => [
-        d.date,
+        window.formatDisplayDate(d.date),
         d.name,
         d.branch,
         window.formatShiftString(d, '\n'),
@@ -2384,15 +2400,17 @@ window.generatePayStub = function (employeeName) {
     doc.text(`Generated on: ${dateStr}`, 14, currentY);
     currentY += 7;
     if (sD || eD) {
-        doc.text(`Pay Period: ${sD || 'Beginning'} to ${eD || 'Present'}`, 14, currentY);
-        currentY += 7;
+        doc.text(`Pay Period: ${window.formatDisplayDate(sD) || 'Beginning'} to ${window.formatDisplayDate(eD) || 'Present'}`, 14, currentY);
+    } else {
+        doc.text(`Pay Period: All Time`, 14, currentY);
     }
+    currentY += 7;
 
     currentY += 5;
 
     const tableHeaders = [["Date", "Shifts", "Daily Hrs", "Rate", "Daily Pay"]];
     const tableRows = ent.map(d => [
-        d.date,
+        window.formatDisplayDate(d.date),
         window.formatShiftString(d, ', '),
         decToT(d.total),
         `${getCurrencySymbol()}${d.rate}`,
@@ -2909,6 +2927,115 @@ window.clearAuditBranchHistory = function (branch) {
     } else if (p) { alert("Incorrect PIN."); }
 };
 
+window.generateAuditBranchPdf = function (branchName) {
+    let display = auditData.filter(e => e.branch === branchName);
+
+    const sD = document.getElementById("filterStartDate") ? document.getElementById("filterStartDate").value : null;
+    const eD = document.getElementById("filterEndDate") ? document.getElementById("filterEndDate").value : null;
+    if (sD) display = display.filter(e => e.date >= sD);
+    if (eD) display = display.filter(e => e.date <= eD);
+
+    if (display.length === 0) return alert("No audit records for this branch in the selected date range.");
+
+    display.sort((a, b) => a.date.localeCompare(b.date));
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const sym = getCurrencySymbol();
+
+    let currentY = 15;
+
+    let logoToUse = appSettings.companyLogo;
+    if (appSettings.showBranchLogos && appSettings.branchLogos && appSettings.branchLogos[branchName]) {
+        logoToUse = appSettings.branchLogos[branchName];
+    }
+
+    if (logoToUse) {
+        try {
+            doc.addImage(logoToUse, 'PNG', 14, currentY, 40, 40, '', 'FAST');
+            currentY += 45;
+        } catch (e) {
+            console.error("Logo inject failed:", e);
+        }
+    }
+
+    doc.setFontSize(22);
+    doc.text("Branch Audit Statement", 14, currentY);
+    currentY += 10;
+
+    doc.setFontSize(12);
+    doc.text(`Branch: ${branchName}`, 14, currentY);
+    currentY += 7;
+    const dateStr = new Date().toLocaleDateString();
+    doc.text(`Generated on: ${dateStr}`, 14, currentY);
+    currentY += 7;
+    if (sD || eD) {
+        doc.text(`Audit Period: ${window.formatDisplayDate(sD) || 'Beginning'} to ${window.formatDisplayDate(eD) || 'Present'}`, 14, currentY);
+    } else {
+        doc.text(`Audit Period: All Time`, 14, currentY);
+    }
+    currentY += 7;
+
+    currentY += 5;
+
+    const tableHeaders = [["Date", "Opening", "Cash Out", "Sales", "Tips", "Actual Closeout", "Closing"]];
+    const tableRows = display.map(d => {
+        const o = parseFloat(d.opening) || 0;
+        const c = parseFloat(d.closing) || 0;
+        const sTotal = (d.sales || []).reduce((sum, v) => sum + (parseFloat(v) || 0), 0);
+        const cout = c - o;
+        const tips = cout - sTotal;
+
+        const futureRecs = auditData.filter(item => item.branch === d.branch && item.date > d.date);
+        futureRecs.sort((a, b) => a.date.localeCompare(b.date));
+        const nextOp = futureRecs.length > 0 ? (parseFloat(futureRecs[0].opening) || 0) : null;
+        const closingColText = nextOp !== null ? `${sym}${nextOp.toFixed(2)}` : '-';
+
+        return [
+            window.formatDisplayDate(d.date),
+            `${sym}${o.toFixed(2)}`,
+            `${sym}${cout.toFixed(2)}`,
+            `${sym}${sTotal.toFixed(2)}`,
+            `${sym}${tips.toFixed(2)}`,
+            `${sym}${c.toFixed(2)}`,
+            closingColText
+        ];
+    });
+
+    doc.autoTable({
+        head: tableHeaders,
+        body: tableRows,
+        startY: currentY,
+        headStyles: { fillColor: [52, 152, 219] },
+    });
+
+    let tCO = 0, tS = 0, tTips = 0;
+    display.forEach(r => {
+        const o = parseFloat(r.opening) || 0;
+        const c = parseFloat(r.closing) || 0;
+        const sTotal = (r.sales || []).reduce((sum, v) => sum + (parseFloat(v) || 0), 0);
+        const cout = c - o;
+        tCO += cout;
+        tS += sTotal;
+        tTips += (cout - sTotal);
+    });
+
+    let finalY = doc.lastAutoTable.finalY + 15;
+    if (finalY + 25 > doc.internal.pageSize.getHeight()) {
+        doc.addPage();
+        finalY = 20;
+    }
+
+    doc.setFontSize(14);
+    doc.text(`Total Cash Out: ${sym}${tCO.toFixed(2)}`, 14, finalY);
+    finalY += 8;
+    doc.text(`Total Gross Sales: ${sym}${tS.toFixed(2)}`, 14, finalY);
+    finalY += 8;
+    doc.text(`Total Tips: ${sym}${tTips.toFixed(2)}`, 14, finalY);
+
+    doc.save(`${branchName}_Audit_Statement.pdf`);
+};
+
 window.renderAuditReports = function () {
     const tableBody = document.querySelector("#auditBranchSummaryTable tbody");
     if (!tableBody) return;
@@ -3025,6 +3152,7 @@ window.renderAuditReports = function () {
             <td>${sym}${tCO.toFixed(2)}</td>
             <td>${sym}${tS.toFixed(2)}</td>
             <td style="color:${branchTipsColor}">${sym}${tTips.toFixed(2)}</td>
+            <td><button class="btn-primary" onclick="generateAuditBranchPdf('${b}')" style="margin:0; padding: 4px 8px; font-size:11px;">📄 PDF</button></td>
             <td><button class="btn-danger-x" onclick="clearAuditBranchHistory('${b}')" title="Clear Branch">×</button></td>
         </tr>`;
     });

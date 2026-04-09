@@ -2052,7 +2052,7 @@ window.exportToPDF = function () {
             head: tableHeaders,
             body: tableRows,
             theme: 'striped',
-            styles: { fontSize: 8, cellPadding: 3 },
+            styles: { fontSize: 8, cellPadding: 3, halign: 'left' },
             headStyles: { fillColor: [52, 58, 64], textColor: 255, fontStyle: 'bold' }
         });
         doc.save('audit_report.pdf');
@@ -2092,8 +2092,7 @@ window.exportToPDF = function () {
         head: tableHeaders,
         body: tableRows,
         theme: 'striped',
-        styles: { fontSize: 8 },
-        columnStyles: { 3: { halign: 'left' } },
+        styles: { fontSize: 8, halign: 'left' },
         headStyles: { fillColor: [52, 58, 64] }
     });
 
@@ -2123,7 +2122,7 @@ window.exportToPDF = function () {
         head: summaryHeaders,
         body: summaryRows,
         theme: 'grid',
-        styles: { fontSize: 9, fontStyle: 'bold' },
+        styles: { fontSize: 9, fontStyle: 'bold', halign: 'left' },
         headStyles: { fillColor: [23, 162, 184] }
     });
 
@@ -2439,8 +2438,7 @@ window.generatePayStub = function (employeeName) {
         head: tableHeaders,
         body: tableRows,
         theme: 'striped',
-        styles: { fontSize: 10 },
-        columnStyles: { 1: { halign: 'left' } },
+        styles: { fontSize: 10, halign: 'left' },
         headStyles: { fillColor: [40, 167, 69] }
     });
 
@@ -3023,6 +3021,7 @@ window.generateAuditBranchPdf = function (branchName) {
         head: tableHeaders,
         body: tableRows,
         startY: currentY,
+        styles: { halign: 'left' },
         headStyles: { fillColor: [52, 152, 219] },
     });
 

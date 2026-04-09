@@ -1154,24 +1154,40 @@ window.processAuditCSV = function (rawText) {
 
         let aC = 0, uC = 0;
         if (rows.length > 0) {
+            let hCols = rows[0].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(v => v.replace(/"/g, '').trim().toLowerCase());
+            let mIdx = { date: 0, branch: 1, opening: 2, added: -1, closing: 3, sales: 5, exp: 7, indiv: -1 };
+            
+            hCols.forEach((h, idx) => {
+                if (h.includes('date')) mIdx.date = idx;
+                else if (h.includes('branch')) mIdx.branch = idx;
+                else if (h.includes('opening')) mIdx.opening = idx;
+                else if (h.includes('added')) mIdx.added = idx;
+                else if (h.includes('closing')) mIdx.closing = idx;
+                else if (h.includes('sales')) mIdx.sales = idx;
+                else if (h.includes('expens')) mIdx.exp = idx;
+                else if (h.includes('individual') || h.includes('transaction')) mIdx.indiv = idx;
+            });
+
             for (let i = 1; i < rows.length; i++) {
                 const row = rows[i];
-                if (row.toLowerCase().includes("summary data")) break;
+                if (row.toLowerCase().includes("summary data") || row.toLowerCase().includes("accumulated branch") || row.toLowerCase().includes("totals")) break;
 
                 const cols = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(v => v.replace(/"/g, '').trim());
-                if (cols.length < 8) continue;
+                if (cols.length < 3 || cols[0] === 'TOTALS' || cols[1] === 'TOTALS') continue;
 
-                const date = formatDate(cols[0]);
+                const date = formatDate(cols[mIdx.date]);
                 if (!date || !date.includes('-')) continue;
-                const branch = cols[1];
-                const opening = parseFloat(cols[2]) || 0;
-                const closing = parseFloat(cols[3]) || 0;
-                const salesTotal = parseFloat(cols[5]) || 0;
-                const expenses = parseFloat(cols[7]) || 0;
+                
+                const branch = cols[mIdx.branch];
+                const opening = parseFloat(cols[mIdx.opening]) || 0;
+                const added = mIdx.added > -1 ? parseFloat(cols[mIdx.added]) || 0 : 0;
+                const closing = parseFloat(cols[mIdx.closing]) || 0;
+                const salesTotal = parseFloat(cols[mIdx.sales]) || 0;
+                const expenses = parseFloat(cols[mIdx.exp]) || 0;
 
                 let salesArray = [];
-                if (cols.length > 9 && cols[9].trim() !== '') {
-                    salesArray = cols[9].split('|').map(s => parseFloat(s)).filter(s => !isNaN(s));
+                if (mIdx.indiv > -1 && cols.length > mIdx.indiv && cols[mIdx.indiv].trim() !== '') {
+                    salesArray = cols[mIdx.indiv].split('|').map(s => parseFloat(s)).filter(s => !isNaN(s));
                 }
                 if (salesArray.length === 0) {
                     salesArray = [salesTotal];
@@ -1182,6 +1198,7 @@ window.processAuditCSV = function (rawText) {
                     date: date,
                     branch: branch,
                     opening: opening,
+                    added: added,
                     closing: closing,
                     sales: salesArray,
                     expenses: expenses
@@ -1788,7 +1805,7 @@ window.exportToExcel = function () {
     const isAuditActive = document.getElementById('auditView').classList.contains('active') || document.getElementById('auditReportsView').classList.contains('active');
 
     if (isAuditActive) {
-        let csv = "Date,Branch,Opening Balance,Added to Till,Closing Balance,Cash Out,Sales Total,Tips,Other Expenses,Net Final,Individual Transactions\n";
+        let csv = "Date,Branch,Opening Balance,Added to Till,Closing Balance,Cash Out,Cash Sales,Tips,Other Expenses,Net Final,Individual Transactions\n";
         const curBranchFilter = document.getElementById("branchFilter").value;
 
         let curData = auditData.filter(d => {
@@ -1821,10 +1838,10 @@ window.exportToExcel = function () {
             csv += `"${fmtD(d.date)}","${d.branch || ''}",${o.toFixed(2)},${added.toFixed(2)},${c.toFixed(2)},${cout.toFixed(2)},${sTotal.toFixed(2)},${tips.toFixed(2)},${ex.toFixed(2)},${net.toFixed(2)},"${indivSales}"\n`;
         });
 
-        csv += `\n"TOTALS",,"N/A","N/A",${tCashOut.toFixed(2)},${tSales.toFixed(2)},${tTips.toFixed(2)},"N/A","N/A","N/A"\n`;
+        csv += `\n"TOTALS",,"N/A","N/A","N/A",${tCashOut.toFixed(2)},${tSales.toFixed(2)},${tTips.toFixed(2)},"N/A","N/A","N/A"\n`;
 
         csv += "\nAccumulated Branch Audit Totals\n";
-        csv += "Branch,Cash Out (Total),Gross Sales,Total Tips\n";
+        csv += "Branch,Cash Out (Total),Cash Sales,Total Tips\n";
 
         const branches = [...new Set(curData.map(d => d.branch))];
         branches.sort((a, b) => auditBranchSortAsc ? (a || '').localeCompare(b || '') : (b || '').localeCompare(a || ''));

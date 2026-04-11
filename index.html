@@ -673,9 +673,25 @@
                 </div>
 
                 <div class="card" id="featureTogglesCard" style="flex: 1; margin: 0;">
+                    <h3>Global Module Toggles</h3>
+                    <p style="font-size: 12px; color: #666; margin-top: 0;">Enable or disable entire application modules here.</p>
+                    <div class="toggle-box" style="padding-top: 5px; background: #e8f4f8; border: 1px solid #b8daff;">
+                        <label class="switch">
+                            <input type="checkbox" id="togglePayrollModule" onchange="saveSettings()">
+                            <span class="slider"></span>
+                        </label>
+                        <label for="togglePayrollModule" style="margin: 0; font-size: 14px; cursor: pointer; font-weight: bold; color: #004085;">Enable Payroll Module</label>
+                    </div>
+                    <div class="toggle-box" style="padding-top: 5px; background: #e8f4f8; border: 1px solid #b8daff; margin-bottom: 20px;">
+                        <label class="switch">
+                            <input type="checkbox" id="toggleAuditModule" onchange="saveSettings()">
+                            <span class="slider"></span>
+                        </label>
+                        <label for="toggleAuditModule" style="margin: 0; font-size: 14px; cursor: pointer; font-weight: bold; color: #004085;">Enable Cash & Tips Module</label>
+                    </div>
+
                     <h3>Feature Toggles</h3>
-                    <p style="font-size: 12px; color: #666; margin-top: 0;">Enable or disable features in the Payroll
-                        Management view.</p>
+                    <p style="font-size: 12px; color: #666; margin-top: 0;">Enable or disable granular features in the active views.</p>
                     <div class="toggle-box" style="padding-top: 5px;">
                         <label class="switch">
                             <input type="checkbox" id="toggleBranch" onchange="saveSettings()">
@@ -838,7 +854,7 @@
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                     <h3 style="margin: 0;">About This Software</h3>
                     <button class="btn-primary"
-                        onclick="localStorage.removeItem('onboardingComplete_v20'); location.reload();"
+                        onclick="startUserTour()"
                         style="margin: 0; padding: 6px 12px; font-size: 12px; border-radius: 5px;">Guided Tour</button>
                 </div>
                 <p style="line-height: 1.6; font-size: 14px; color: #444;">The Payroll Management System v20.7 is a
@@ -907,7 +923,7 @@
             the core features.</p>
         <button class="btn-primary" id="tourNextBtn" onclick="nextTourStep()"
             style="width: 100%; margin: 0; padding: 10px; font-weight: bold;">Next Step</button>
-        <button class="btn-reset" onclick="endTour()"
+        <button class="btn-reset" id="tourSkipBtn" onclick="skipTourBtnClicked()"
             style="width: 100%; margin-top: 10px; padding: 10px; font-weight: bold; background: transparent; color: #888; text-decoration: underline; box-shadow: none;">Skip
             Tour</button>
     </div>

@@ -2,6 +2,8 @@ let masterData = JSON.parse(localStorage.getItem("payroll_v20")) || [];
 let auditData = JSON.parse(localStorage.getItem("auditData_v20")) || [];
 let editingAuditId = null;
 let appSettings = JSON.parse(localStorage.getItem("settings_v20")) || {};
+appSettings.enablePayrollModule = appSettings.enablePayrollModule ?? true;
+appSettings.enableAuditModule = appSettings.enableAuditModule ?? true;
 appSettings.showBranch = appSettings.showBranch ?? false;
 appSettings.showSummary = appSettings.showSummary ?? false;
 appSettings.showBranchSummary = appSettings.showBranchSummary ?? false;
@@ -194,12 +196,32 @@ const tourSteps = [
         text: "Click any chart to automatically expand it into presentation mode."
     },
     {
-        tab: 'about',
-        targetId: 'aboutAppCard',
-        title: "You're All Set!",
-        text: "You can replay this tour anytime from the About pane. Enjoy!"
+        tab: 'settings',
+        targetId: 'featureTogglesCard',
+        title: "Tailor Your Workspace",
+        text: "Before we finish, which modules do you plan to use?<br><br><div style='display:flex; flex-direction:column; gap: 8px; margin-top: 15px;'><button class='btn-success' style='margin:0; font-size:13px; padding: 10px;' onclick='setTourModuleChoice(\"both\")'>Keep Both Modules</button> <button class='btn-primary' style='margin:0; font-size:13px; padding:10px;' onclick='setTourModuleChoice(\"payroll\")'>Payroll Only</button> <button class='btn-primary' style='background:#17a2b8; border: none; margin:0; font-size:13px; padding:10px;' onclick='setTourModuleChoice(\"audit\")'>Cash & Tips Only</button></div>",
+        isFinalChoice: true
     }
 ];
+
+window.setTourModuleChoice = function(choice) {
+    let enablePayroll = (choice === 'both' || choice === 'payroll');
+    let enableAudit = (choice === 'both' || choice === 'audit');
+    
+    // Set the checkboxes so saveSettings reads the correct values
+    document.getElementById("togglePayrollModule").checked = enablePayroll;
+    document.getElementById("toggleAuditModule").checked = enableAudit;
+    
+    saveSettings();
+    endTour();
+    
+    // Navigate to the respective view based on selection
+    if (choice === 'audit') {
+        switchTab('audit');
+    } else {
+        switchTab('payroll');
+    }
+};
 
 window.startUserTour = function () {
     document.getElementById('tourOverlay').style.display = 'block';
@@ -223,6 +245,22 @@ window.endTour = function () {
     document.getElementById('tourOverlay').style.display = 'none';
     document.getElementById('tourBox').style.display = 'none';
     localStorage.setItem("onboardingComplete_v20", "true");
+};
+
+window.skipTourBtnClicked = function () {
+    let isFirstTime = !localStorage.getItem("onboardingComplete_v20");
+    if (isFirstTime) {
+        clearTourHighlight();
+        currentTourStep = tourSteps.length - 1;
+        renderTourStep();
+    } else {
+        endTour();
+        if (!appSettings.enablePayrollModule && appSettings.enableAuditModule) {
+            switchTab('audit');
+        } else {
+            switchTab('payroll');
+        }
+    }
 };
 
 function clearTourHighlight() {
@@ -285,17 +323,27 @@ function renderTourStep() {
         el.scrollIntoView({ behavior: "smooth", block: "center" });
 
         document.getElementById('tourTitle').innerText = step.title;
-        document.getElementById('tourText').innerText = step.text;
+        document.getElementById('tourText').innerHTML = step.text;
 
-        if (currentTourStep === tourSteps.length - 1) {
-            document.getElementById('tourNextBtn').innerText = "Finish Tour";
+        let skipBtn = document.getElementById('tourSkipBtn');
+        if (step.isFinalChoice) {
+            document.getElementById('tourNextBtn').style.display = 'none';
+            if (skipBtn) skipBtn.style.display = 'none';
         } else {
-            document.getElementById('tourNextBtn').innerText = "Next Step";
+            document.getElementById('tourNextBtn').style.display = 'block';
+            if (skipBtn) skipBtn.style.display = 'block';
+            if (currentTourStep === tourSteps.length - 1) {
+                document.getElementById('tourNextBtn').innerText = "Finish Tour";
+            } else {
+                document.getElementById('tourNextBtn').innerText = "Next Step";
+            }
         }
     }, 150);
 }
 
 function saveSettings() {
+    appSettings.enablePayrollModule = document.getElementById("togglePayrollModule").checked;
+    appSettings.enableAuditModule = document.getElementById("toggleAuditModule").checked;
     appSettings.showBranch = document.getElementById("toggleBranch").checked;
     appSettings.showSummary = document.getElementById("toggleSummary").checked;
     appSettings.showBranchSummary = document.getElementById("toggleBranchSummary").checked;
@@ -382,6 +430,31 @@ function applySettings() {
     const bGC = document.getElementById("branchGraphCard");
     if (bGC) bGC.style.display = appSettings.showBranch ? "" : "none";
 
+    document.getElementById("togglePayrollModule").checked = appSettings.enablePayrollModule;
+    document.getElementById("toggleAuditModule").checked = appSettings.enableAuditModule;
+    
+    const menuPayroll = document.getElementById("menuPayroll");
+    if (menuPayroll) menuPayroll.style.display = appSettings.enablePayrollModule ? "" : "none";
+    const menuReports = document.getElementById("menuReports");
+    if (menuReports) menuReports.style.display = appSettings.enablePayrollModule ? "" : "none";
+    
+    const menuAudit = document.getElementById("menuAudit");
+    if (menuAudit) menuAudit.style.display = appSettings.enableAuditModule ? "" : "none";
+    const menuAuditReports = document.getElementById("menuAuditReports");
+    if (menuAuditReports) menuAuditReports.style.display = appSettings.enableAuditModule ? "" : "none";
+
+    // Auto-switch away from hidden tabs if they try to hide currently viewed tabs
+    let activeTab = document.querySelector('.sidebar-menu li.active')?.id;
+    if (activeTab === 'menuPayroll' || activeTab === 'menuReports') {
+        if (!appSettings.enablePayrollModule) {
+            switchTab(appSettings.enableAuditModule ? 'audit' : 'settings');
+        }
+    } else if (activeTab === 'menuAudit' || activeTab === 'menuAuditReports') {
+        if (!appSettings.enableAuditModule) {
+            switchTab(appSettings.enablePayrollModule ? 'payroll' : 'settings');
+        }
+    }
+
     document.getElementById("toggleBranch").checked = appSettings.showBranch;
     document.getElementById("toggleSummary").checked = appSettings.showSummary;
     document.getElementById("toggleBranchSummary").checked = appSettings.showBranchSummary;
@@ -392,7 +465,7 @@ function applySettings() {
     document.getElementById("toggleAuditPdf").checked = appSettings.showAuditPdf;
     document.getElementById("toggleAuditExportPdf").checked = appSettings.showAuditExportPdf;
 
-    let activeTab = document.querySelector('.sidebar-menu li.active')?.id;
+    activeTab = document.querySelector('.sidebar-menu li.active')?.id;
     if (activeTab === 'menuAudit' || activeTab === 'menuAuditReports') {
         document.getElementById("btnExportPdf").style.display = appSettings.showAuditExportPdf ? "" : "none";
     } else {

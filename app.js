@@ -1,7 +1,93 @@
-let masterData = JSON.parse(localStorage.getItem("payroll_v20")) || [];
-let auditData = JSON.parse(localStorage.getItem("auditData_v20")) || [];
+// --- FIREBASE CLOUD SAAS CONFIGURATION ---
+const firebaseConfig = {
+    apiKey: "AIzaSyBL-lQ_IzADLKUi61b_FUwOCvj2lEyuggs",
+    authDomain: "finance-operations-cloud.firebaseapp.com",
+    projectId: "finance-operations-cloud",
+    storageBucket: "finance-operations-cloud.firebasestorage.app",
+    messagingSenderId: "31843882376",
+    appId: "1:31843882376:web:f9f4c31fa2d7e16bba563d",
+    measurementId: "G-43YEQ6DTF8"
+};
+
+let firebaseApp, auth, db;
+let currentCompanyId = null;
+
+function loadUserCompanyProfile(user) {
+    db.collection("users").doc(user.uid).collection("profile").doc("metadata").get().then(doc => {
+        if (doc.exists) {
+            currentCompanyId = doc.data().companyId;
+            let cIDEl = document.getElementById("displayInviteCode");
+            if(cIDEl) cIDEl.value = currentCompanyId;
+            let tMC = document.getElementById("teamManagementCard");
+            if(tMC) tMC.style.display = "block";
+            
+            appSettings.isCloudReady = true;
+            AppStorage.isCloudReady = true;
+            let badge = document.getElementById("cloudStatusBadge");
+            if(badge) { badge.innerText = "Cloud Synced"; badge.style.background = "#28a745"; }
+            let btn = document.getElementById("cloudLoginBtn");
+            if(btn) { btn.innerText = "Disconnect Cloud Account"; btn.style.background = "#dc3545"; }
+            saveSettings();
+        }
+    }).catch(err => console.error("Error loading profile:", err));
+}
+
+if (firebaseConfig.apiKey !== "YOUR_API_KEY" && window.firebase) {
+    firebaseApp = firebase.initializeApp(firebaseConfig);
+    auth = firebase.auth();
+    db = firebase.firestore();
+    
+    auth.onAuthStateChanged(user => {
+        if (user) {
+            loadUserCompanyProfile(user);
+        } else {
+            currentCompanyId = null;
+            appSettings.isCloudReady = false;
+            AppStorage.isCloudReady = false;
+            let tMC = document.getElementById("teamManagementCard");
+            if(tMC) tMC.style.display = "none";
+            let badge = document.getElementById("cloudStatusBadge");
+            if(badge) { badge.innerText = "Local Mode"; badge.style.background = "#6c757d"; }
+            let btn = document.getElementById("cloudLoginBtn");
+            if(btn) { btn.innerText = "Login to Cloud Account"; btn.style.background = "#28a745"; }
+            saveSettings();
+        }
+    });
+}
+
+const AppStorage = {
+    isCloudReady: false,
+    getItem(key) { return window['localStorage'].getItem(key); },
+    setItem(key, value) {
+        window['localStorage'].setItem(key, value);
+        if (this.isCloudReady) this.syncToCloud(key, value);
+    },
+    removeItem(key) {
+        window['localStorage'].removeItem(key);
+        if (this.isCloudReady) this.deleteFromCloud(key);
+    },
+    syncToCloud(key, value) { 
+        if (db && auth && auth.currentUser && currentCompanyId) {
+            console.log(`[Cloud Sync] Pushing ${key} to Firestore Vault: ${currentCompanyId}...`);
+            let payload = { data: value, timestamp: firebase.firestore.FieldValue.serverTimestamp() };
+            db.collection("companies").doc(currentCompanyId).collection("appState").doc(key).set(payload)
+                .catch(err => console.error("Cloud Sync Error:", err));
+        }
+    },
+    deleteFromCloud(key) { 
+        if (db && auth && auth.currentUser && currentCompanyId) {
+            console.log(`[Cloud Sync] Deleting ${key} from Firestore Vault: ${currentCompanyId}...`);
+            db.collection("companies").doc(currentCompanyId).collection("appState").doc(key).delete()
+                .catch(err => console.error("Cloud Delete Error:", err));
+        }
+    }
+};
+
+let masterData = JSON.parse(AppStorage.getItem("payroll_v20")) || [];
+let auditData = JSON.parse(AppStorage.getItem("auditData_v20")) || [];
 let editingAuditId = null;
-let appSettings = JSON.parse(localStorage.getItem("settings_v20")) || {};
+let appSettings = JSON.parse(AppStorage.getItem("settings_v20")) || {};
+appSettings.isCloudReady = appSettings.isCloudReady ?? false;
 appSettings.enablePayrollModule = appSettings.enablePayrollModule ?? true;
 appSettings.enableAuditModule = appSettings.enableAuditModule ?? true;
 appSettings.showBranch = appSettings.showBranch ?? false;
@@ -45,15 +131,15 @@ window.formatDisplayDate = function(dateStr) {
 };
 
 window.getCurrencySymbol = function () {
-    let pref = localStorage.getItem("preferredCurrency_v20");
+    let pref = AppStorage.getItem("preferredCurrency_v20");
     if (!pref) return "$";
-    if (pref === "custom") return localStorage.getItem("customCurrency_v20") || "$";
+    if (pref === "custom") return AppStorage.getItem("customCurrency_v20") || "$";
     return pref;
 };
 
 window.handleCurrencyChange = function () {
     const val = document.getElementById("currencySelect").value;
-    localStorage.setItem("preferredCurrency_v20", val);
+    AppStorage.setItem("preferredCurrency_v20", val);
     if (val === "custom") {
         document.getElementById("customCurrencyContainer").style.display = "block";
     } else {
@@ -64,7 +150,7 @@ window.handleCurrencyChange = function () {
 };
 
 window.saveCustomCurrency = function () {
-    localStorage.setItem("customCurrency_v20", document.getElementById("customCurrencyInput").value);
+    AppStorage.setItem("customCurrency_v20", document.getElementById("customCurrencyInput").value);
     renderAll();
     updateCurrencyLabels();
 };
@@ -72,6 +158,75 @@ window.saveCustomCurrency = function () {
 window.updateCurrencyLabels = function () {
     const sym = getCurrencySymbol();
     document.querySelectorAll(".currency-label").forEach(el => el.innerText = sym);
+};
+
+window.toggleCloudLogin = function() {
+    if (!window.firebase || firebaseConfig.apiKey === "YOUR_API_KEY") {
+        alert("Firebase Configuration Missing.\n\nPlease copy your API credentials from the Firebase Console and paste them into app.js at the 'firebaseConfig' object to activate the Cloud Engine.");
+        return;
+    }
+
+    if (appSettings.isCloudReady) {
+        if (confirm("Disconnect from cloud account? You will return to Local Mode.")) {
+            auth.signOut();
+            alert("Disconnected! You are now in Free/Local-only mode.");
+        }
+    } else {
+        document.getElementById('authModalOverlay').style.display = 'block';
+        document.getElementById('authModal').style.display = 'block';
+        document.getElementById('authErrorMsg').style.display = 'none';
+        document.getElementById('authEmail').value = '';
+        document.getElementById('authPassword').value = '';
+        document.getElementById('authInviteCode').value = '';
+    }
+};
+
+window.closeAuthModal = function() {
+    document.getElementById('authModalOverlay').style.display = 'none';
+    document.getElementById('authModal').style.display = 'none';
+};
+
+window.performCloudLogin = function() {
+    let email = document.getElementById('authEmail').value;
+    let pwd = document.getElementById('authPassword').value;
+    auth.signInWithEmailAndPassword(email, pwd)
+        .then(() => {
+            closeAuthModal();
+            alert("Successfully logged in to Cloud Account!");
+        })
+        .catch(err => {
+            let msg = document.getElementById('authErrorMsg');
+            msg.innerText = err.message;
+            msg.style.display = 'block';
+        });
+};
+
+function generateCompanyId() {
+    return Math.random().toString(36).substring(2, 8).toUpperCase();
+}
+
+window.performCloudRegister = function() {
+    let email = document.getElementById('authEmail').value;
+    let pwd = document.getElementById('authPassword').value;
+    let inviteCode = document.getElementById('authInviteCode').value.trim().toUpperCase() || generateCompanyId();
+    
+    auth.createUserWithEmailAndPassword(email, pwd)
+        .then((cred) => {
+            return db.collection("users").doc(cred.user.uid).collection("profile").doc("metadata").set({
+                companyId: inviteCode,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        })
+        .then(() => {
+            closeAuthModal();
+            alert(`Registration successful!\n\nYour Company Vault ID (Invite Code) is: ${inviteCode}`);
+            if (auth.currentUser) loadUserCompanyProfile(auth.currentUser);
+        })
+        .catch(err => {
+            let msg = document.getElementById('authErrorMsg');
+            msg.innerText = err.message;
+            msg.style.display = 'block';
+        });
 };
 
 window.renderRates = function () {
@@ -132,7 +287,7 @@ window.onload = function () {
     applyDatePreset();
     if (typeof renderBackupReminder === "function") renderBackupReminder();
 
-    if (!localStorage.getItem("onboardingComplete_v20")) {
+    if (!AppStorage.getItem("onboardingComplete_v20")) {
         startUserTour();
     }
 
@@ -244,11 +399,11 @@ window.endTour = function () {
     clearTourHighlight();
     document.getElementById('tourOverlay').style.display = 'none';
     document.getElementById('tourBox').style.display = 'none';
-    localStorage.setItem("onboardingComplete_v20", "true");
+    AppStorage.setItem("onboardingComplete_v20", "true");
 };
 
 window.skipTourBtnClicked = function () {
-    let isFirstTime = !localStorage.getItem("onboardingComplete_v20");
+    let isFirstTime = !AppStorage.getItem("onboardingComplete_v20");
     if (isFirstTime) {
         clearTourHighlight();
         currentTourStep = tourSteps.length - 1;
@@ -362,13 +517,30 @@ function saveSettings() {
     appSettings.securityPin = document.getElementById("securityPinSetting").value || '1234';
     appSettings.minRate = parseInt(document.getElementById("minRateSetting").value, 10) || 15;
     appSettings.maxRate = parseInt(document.getElementById("maxRateSetting").value, 10) || 35;
-    localStorage.setItem("settings_v20", JSON.stringify(appSettings));
+    AppStorage.setItem("settings_v20", JSON.stringify(appSettings));
     applySettings();
     renderRates();
     renderAll();
 }
 
 function applySettings() {
+    AppStorage.isCloudReady = appSettings.isCloudReady;
+    let cloudLoginBtn = document.getElementById("cloudLoginBtn");
+    let cloudStatusBadge = document.getElementById("cloudStatusBadge");
+    if (cloudLoginBtn && cloudStatusBadge) {
+        if (appSettings.isCloudReady) {
+            cloudLoginBtn.innerText = "Disconnect Cloud Account";
+            cloudLoginBtn.style.background = "#dc3545";
+            cloudStatusBadge.innerText = "Cloud Synced";
+            cloudStatusBadge.style.background = "#28a745";
+        } else {
+            cloudLoginBtn.innerText = "Login to Cloud Account";
+            cloudLoginBtn.style.background = "#28a745";
+            cloudStatusBadge.innerText = "Local Mode";
+            cloudStatusBadge.style.background = "#6c757d";
+        }
+    }
+
     const branchDisplay = appSettings.showBranch ? "" : "none";
     document.getElementById("branchSelectDropdown").style.display = branchDisplay;
     document.getElementById("branchName").style.display = branchDisplay;
@@ -518,11 +690,11 @@ function applySettings() {
         logoUploadSection.style.display = "none";
     }
 
-    let pref = localStorage.getItem("preferredCurrency_v20") || "$";
+    let pref = AppStorage.getItem("preferredCurrency_v20") || "$";
     document.getElementById("currencySelect").value = pref;
     if (pref === "custom") {
         document.getElementById("customCurrencyContainer").style.display = "block";
-        document.getElementById("customCurrencyInput").value = localStorage.getItem("customCurrency_v20") || "";
+        document.getElementById("customCurrencyInput").value = AppStorage.getItem("customCurrency_v20") || "";
     } else {
         document.getElementById("customCurrencyContainer").style.display = "none";
     }
@@ -798,7 +970,7 @@ window.addEntry = function () {
                 dup.branch = branch;
                 dup.total = calcH(dup.s1s, dup.s1e) + calcH(dup.s2s, dup.s2e) + calcH(dup.s3s, dup.s3e) + (appSettings.showExtendedShifts ? calcH(dup.s4s, dup.s4e) + calcH(dup.s5s, dup.s5e) : 0);
                 dup.pay = (dup.total * dup.rate).toFixed(2);
-                localStorage.setItem("payroll_v20", JSON.stringify(masterData));
+                AppStorage.setItem("payroll_v20", JSON.stringify(masterData));
                 resetShifts(); renderAll(); if (typeof checkPendingAI === 'function') checkPendingAI(); return;
             }
         } else {
@@ -825,7 +997,7 @@ window.addEntry = function () {
         total: h, rate, pay: (h * rate).toFixed(2)
     };
     if (editingId) masterData = masterData.filter(e => e.id !== editingId);
-    masterData.push(entry); localStorage.setItem("payroll_v20", JSON.stringify(masterData));
+    masterData.push(entry); AppStorage.setItem("payroll_v20", JSON.stringify(masterData));
 
     let viewer = document.getElementById("pdfViewer");
     if (viewer && window.saveImage) {
@@ -1136,7 +1308,7 @@ window.processPayrollCSV = function (rawText) {
             }
         }
         masterData.sort((a, b) => b.date.localeCompare(a.date));
-        localStorage.setItem("payroll_v20", JSON.stringify(masterData));
+        AppStorage.setItem("payroll_v20", JSON.stringify(masterData));
 
         let hasBranchCol = (mapIdx && mapIdx.branch > -1);
         let uniqueBranches = new Set(masterData.map(e => (e.branch || "").trim()).filter(b => b !== ""));
@@ -1285,7 +1457,7 @@ window.processAuditCSV = function (rawText) {
                 }
             }
         }
-        localStorage.setItem("auditData_v20", JSON.stringify(auditData));
+        AppStorage.setItem("auditData_v20", JSON.stringify(auditData));
 
         let hasBranchAuditCol = (rows.length > 0 && rows[0].toLowerCase().includes('branch'));
         let uniqueAuditBranches = new Set(auditData.map(e => (e.branch || "").trim()).filter(b => b !== ""));
@@ -1761,7 +1933,7 @@ window.executeBulkUpdate = function () {
     if (t === "SELECTED" && !sN) return alert("Select Employee."); if (!nB) return alert("Enter Branch.");
     if (confirm(`Apply updates?`)) {
         masterData = masterData.map(e => (t === "ALL" || e.name === sN) ? { ...e, branch: nB, rate: nR, pay: (e.total * nR).toFixed(2) } : e);
-        localStorage.setItem("payroll_v20", JSON.stringify(masterData)); renderAll();
+        AppStorage.setItem("payroll_v20", JSON.stringify(masterData)); renderAll();
     }
 };
 
@@ -1828,7 +2000,7 @@ window.updateBranchFromDropdown = function () {
 window.deleteEntry = function (id) {
     const p = prompt("Security PIN required to delete this entry:");
     if (p === appSettings.securityPin) {
-        if (confirm("Delete day?")) { masterData = masterData.filter(e => e.id !== id); localStorage.setItem("payroll_v20", JSON.stringify(masterData)); renderAll(); }
+        if (confirm("Delete day?")) { masterData = masterData.filter(e => e.id !== id); AppStorage.setItem("payroll_v20", JSON.stringify(masterData)); renderAll(); }
     } else if (p) { alert("Incorrect PIN."); }
 };
 window.deleteEmployeeBulk = function (n) {
@@ -1837,8 +2009,8 @@ window.deleteEmployeeBulk = function (n) {
         if (confirm("Clear history for " + n + "?")) {
             masterData = masterData.filter(e => e.name !== n);
             auditData = auditData.filter(e => e.name !== n);
-            localStorage.setItem("payroll_v20", JSON.stringify(masterData));
-            localStorage.setItem("auditData_v20", JSON.stringify(auditData));
+            AppStorage.setItem("payroll_v20", JSON.stringify(masterData));
+            AppStorage.setItem("auditData_v20", JSON.stringify(auditData));
             renderAll();
         }
     } else if (p) { alert("Incorrect PIN."); }
@@ -1849,8 +2021,8 @@ window.clearBranchSecure = function (branch) {
         if (confirm(`Permanently wipe all records for branch: ${branch}?`)) {
             masterData = masterData.filter(e => e.branch !== branch);
             auditData = auditData.filter(e => e.branch !== branch);
-            localStorage.setItem("payroll_v20", JSON.stringify(masterData));
-            localStorage.setItem("auditData_v20", JSON.stringify(auditData));
+            AppStorage.setItem("payroll_v20", JSON.stringify(masterData));
+            AppStorage.setItem("auditData_v20", JSON.stringify(auditData));
             renderAll();
         }
     } else if (p) {
@@ -1864,8 +2036,8 @@ window.clearAllTablesSecure = function () {
         if (confirm("Permanently wipe database?")) {
             masterData = [];
             auditData = [];
-            localStorage.removeItem("payroll_v20");
-            localStorage.removeItem("auditData_v20");
+            AppStorage.removeItem("payroll_v20");
+            AppStorage.removeItem("auditData_v20");
             renderAll();
         }
     } else if (p) {
@@ -2818,7 +2990,7 @@ window.saveAuditEntry = function () {
         window.saveImage(entry.id, img.src);
     }
 
-    localStorage.setItem("auditData_v20", JSON.stringify(auditData));
+    AppStorage.setItem("auditData_v20", JSON.stringify(auditData));
     resetAuditForm();
     renderAll();
 };
@@ -2828,7 +3000,7 @@ window.deleteAuditEntry = function (id) {
     if (p === appSettings.securityPin) {
         if (confirm("Delete audit record?")) {
             auditData = auditData.filter(e => e.id !== id);
-            localStorage.setItem("auditData_v20", JSON.stringify(auditData));
+            AppStorage.setItem("auditData_v20", JSON.stringify(auditData));
             renderAll();
         }
     } else if (p) { alert("Incorrect PIN."); }
@@ -2993,7 +3165,7 @@ window.executeAuditBulkUpdate = function () {
                 }
             });
             if (updated > 0) {
-                localStorage.setItem("auditData_v20", JSON.stringify(auditData));
+                AppStorage.setItem("auditData_v20", JSON.stringify(auditData));
                 renderAll();
                 alert(`Mass Update Complete. ${updated} records changed.`);
             } else {
@@ -3008,7 +3180,7 @@ window.clearAuditBranchHistory = function (branch) {
     if (p === appSettings.securityPin) {
         if (confirm(`Permanently delete all Audit records for branch '${branch}'?`)) {
             auditData = auditData.filter(d => d.branch !== branch);
-            localStorage.setItem("auditData_v20", JSON.stringify(auditData));
+            AppStorage.setItem("auditData_v20", JSON.stringify(auditData));
             renderAll();
             alert(`Branch '${branch}' Cash & Tips data deleted.`);
         }

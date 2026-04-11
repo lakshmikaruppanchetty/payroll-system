@@ -28,6 +28,7 @@ function loadUserCompanyProfile(user) {
             let btn = document.getElementById("cloudLoginBtn");
             if(btn) { btn.innerText = "Disconnect Cloud Account"; btn.style.background = "#dc3545"; }
             saveSettings();
+            AppStorage.pullFromCloud();
         }
     }).catch(err => console.error("Error loading profile:", err));
 }
@@ -79,6 +80,33 @@ const AppStorage = {
             console.log(`[Cloud Sync] Deleting ${key} from Firestore Vault: ${currentCompanyId}...`);
             db.collection("companies").doc(currentCompanyId).collection("appState").doc(key).delete()
                 .catch(err => console.error("Cloud Delete Error:", err));
+        }
+    },
+    pullFromCloud() {
+        if (db && auth && auth.currentUser && currentCompanyId) {
+            // Only pull once per active browser session to prevent reload loops
+            if (!sessionStorage.getItem("hasPulledCloudSync")) {
+                sessionStorage.setItem("hasPulledCloudSync", "true");
+                console.log(`[Cloud Sync] Downloading from Vault: ${currentCompanyId}...`);
+                db.collection("companies").doc(currentCompanyId).collection("appState").get()
+                    .then(snapshot => {
+                        if (snapshot.empty) return;
+                        let changesMade = false;
+                        snapshot.forEach(doc => {
+                            let cloudData = doc.data().data;
+                            if (cloudData && window['localStorage'].getItem(doc.id) !== cloudData) {
+                                window['localStorage'].setItem(doc.id, cloudData);
+                                changesMade = true;
+                            }
+                        });
+                        if (changesMade) {
+                            console.log("[Cloud Sync] Download complete. Refreshing screen...");
+                            location.reload();
+                        } else {
+                            console.log("[Cloud Sync] Database already entirely up to date.");
+                        }
+                    }).catch(err => console.error("Cloud Pull Error", err));
+            }
         }
     }
 };

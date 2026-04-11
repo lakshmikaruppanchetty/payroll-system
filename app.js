@@ -380,6 +380,12 @@ const tourSteps = [
     },
     {
         tab: 'settings',
+        targetId: 'cloudSyncCard',
+        title: "Cloud Workspace",
+        text: "Log in here to enable Enterprise Cloud Syncing, create a Company Vault, and unlock Team Management collaboration!"
+    },
+    {
+        tab: 'settings',
         targetId: 'featureTogglesCard',
         title: "Tailor Your Workspace",
         text: "Before we finish, which modules do you plan to use?<br><br><div style='display:flex; flex-direction:column; gap: 8px; margin-top: 15px;'><button class='btn-success' style='margin:0; font-size:13px; padding: 10px;' onclick='setTourModuleChoice(\"both\")'>Keep Both Modules</button> <button class='btn-primary' style='margin:0; font-size:13px; padding:10px;' onclick='setTourModuleChoice(\"payroll\")'>Payroll Only</button> <button class='btn-primary' style='background:#17a2b8; border: none; margin:0; font-size:13px; padding:10px;' onclick='setTourModuleChoice(\"audit\")'>Cash & Tips Only</button></div>",
@@ -3035,7 +3041,7 @@ window.deleteAuditEntry = function (id) {
 };
 
 window.editAuditEntry = function (id) {
-    const entry = auditData.find(e => e.id === id);
+    const entry = auditData.find(e => e.id == id); // Use loose equality since Date.now() is numeric but passed as string
     if (!entry) return;
     editingAuditId = entry.id;
     document.getElementById('auditDate').value = entry.date;

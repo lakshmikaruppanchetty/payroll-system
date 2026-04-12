@@ -78,8 +78,8 @@ if (firebaseConfig.apiKey !== "YOUR_API_KEY" && window.firebase) {
             evalOfflineBanner();
         } else {
             if (user && !user.emailVerified) {
-                auth.signOut();
-                return;
+                // Do not auto-signout here, as it interrupts db writes during register.
+                // Explicit signout is handled in executeCloudRegister and performCloudLogin.
             }
             currentCompanyId = null;
             appSettings.isCloudReady = false;

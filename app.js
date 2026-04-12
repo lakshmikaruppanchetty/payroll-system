@@ -12,6 +12,40 @@ const firebaseConfig = {
 let firebaseApp, auth, db;
 let currentCompanyId = null;
 
+window.handleBannerRemind = function(val) {
+    if (!val) return;
+    let t = 0;
+    if (val === "WEEK") t = Date.now() + 7 * 24 * 60 * 60 * 1000;
+    if (val === "MONTH") t = Date.now() + 30 * 24 * 60 * 60 * 1000;
+    if (val === "NEVER") t = "NEVER";
+    localStorage.setItem("offlineBannerReminder", t.toString());
+    closeOfflineBanner();
+};
+
+window.closeOfflineBanner = function() {
+    const b = document.getElementById("offlineBanner");
+    if (b) {
+        b.style.opacity = "0";
+        setTimeout(() => b.style.display = "none", 300);
+    }
+};
+
+window.evalOfflineBanner = function() {
+    if (window.auth && window.auth.currentUser) {
+        closeOfflineBanner();
+        return;
+    }
+    const r = localStorage.getItem("offlineBannerReminder");
+    if (r === "NEVER") return;
+    if (r && !isNaN(parseInt(r)) && Date.now() < parseInt(r)) return;
+    
+    const b = document.getElementById("offlineBanner");
+    if (b) {
+        b.style.display = "flex";
+        b.style.opacity = "1";
+    }
+};
+
 function loadUserCompanyProfile(user) {
     db.collection("users").doc(user.uid).collection("profile").doc("metadata").get().then(doc => {
         if (doc.exists) {
@@ -41,6 +75,7 @@ if (firebaseConfig.apiKey !== "YOUR_API_KEY" && window.firebase) {
     auth.onAuthStateChanged(user => {
         if (user) {
             loadUserCompanyProfile(user);
+            evalOfflineBanner();
         } else {
             currentCompanyId = null;
             appSettings.isCloudReady = false;
@@ -52,6 +87,7 @@ if (firebaseConfig.apiKey !== "YOUR_API_KEY" && window.firebase) {
             let btn = document.getElementById("cloudLoginBtn");
             if(btn) { btn.innerText = "Login to Cloud Account"; btn.style.background = "#28a745"; }
             saveSettings();
+            evalOfflineBanner();
         }
     });
 }
@@ -319,12 +355,13 @@ window.onload = function () {
         startUserTour();
     }
 
-    if (window.location.hash) {
-        let h = window.location.hash.substring(1);
-        if (['payroll', 'reports', 'audit', 'auditReports', 'settings', 'about'].includes(h)) {
-            switchTab(h, false);
-        }
+    const hash = window.location.hash.replace('#', '');
+    if (hash && ['payroll', 'audit', 'reports', 'auditReports', 'settings', 'about'].includes(hash)) {
+        switchTab(hash, false);
     }
+
+    applySettings();
+    setTimeout(() => evalOfflineBanner(), 500);
 };
 
 window.addEventListener('hashchange', () => {

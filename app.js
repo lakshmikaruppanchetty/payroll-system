@@ -269,7 +269,9 @@ window.checkAuthInputs = function() {
 
 function mapAuthError(errCode, defaultMsg) {
     if (errCode === 'auth/invalid-email') return "Please enter a valid email address.";
-    if (errCode === 'auth/user-not-found' || errCode === 'auth/wrong-password' || errCode === 'auth/invalid-credential') return "Incorrect email or password.";
+    if (errCode === 'auth/user-not-found') return "Email not registered. Please click Register New Account.";
+    if (errCode === 'auth/wrong-password') return "Incorrect password.";
+    if (errCode === 'auth/invalid-credential') return "Email not found / incorrect password. Please Register if you are new.";
     if (errCode === 'auth/email-already-in-use') return "An account with this email already exists. Try Logging In.";
     if (errCode === 'auth/weak-password') return "Password is too weak. Please use at least 6 characters.";
     return defaultMsg || "An error occurred with authentication.";

@@ -329,6 +329,11 @@ window.cancelAndFocusInvite = function() {
     setTimeout(() => { input.style.border = "1px solid #ccc"; }, 1500);
 };
 
+window.closeVerifyEmailModal = function() {
+    document.getElementById('verifyEmailModal').style.display = 'none';
+    document.getElementById('verifyEmailModalOverlay').style.display = 'none';
+};
+
 window.executeCloudRegister = function() {
     document.getElementById('inviteConfirmModal').style.display = 'none';
     document.getElementById('inviteConfirmModalOverlay').style.display = 'none';
@@ -348,7 +353,9 @@ window.executeCloudRegister = function() {
         .then(() => {
             auth.signOut();
             closeAuthModal();
-            alert(`Registration successful!\n\nYour Company Vault ID (Invite Code) is: ${inviteCode}\n\nIMPORTANT: We have sent a verification email to ${email}. Please check your inbox and click the security link before attempting to Log In!`);
+            document.getElementById('displayNewInviteCode').innerText = inviteCode;
+            document.getElementById('verifyEmailModalOverlay').style.display = 'block';
+            document.getElementById('verifyEmailModal').style.display = 'block';
         })
         .catch(err => {
             let msg = document.getElementById('authErrorMsg');

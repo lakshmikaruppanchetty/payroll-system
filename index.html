@@ -995,6 +995,16 @@
         <button class="btn-success" onclick="executeCloudRegister()" style="width: 100%; margin-top: 10px; margin-bottom: 0px; padding: 12px; font-weight: bold; background: #e74c3c;">Create a New Workspace</button>
     </div>
 
+    <div id="verifyEmailModalOverlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); z-index:10040;"></div>
+    <div id="verifyEmailModal" style="display:none; position:fixed; z-index:10050; background:white; padding:35px 30px; border-radius:12px; width:350px; box-shadow:0 10px 40px rgba(0,0,0,0.5); top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center;">
+        <div style="font-size: 40px; margin-bottom: 10px;">✉️</div>
+        <h3 style="margin-top:0; color: #28a745;">Verify Your Email</h3>
+        <p style="font-size: 14px; color: #333; line-height: 1.5; margin-bottom: 15px;">Registration successful! We have sent a verification link to your email address.</p>
+        <p style="font-size: 13px; color: #666; line-height: 1.5; margin-bottom: 25px; padding: 10px; background: #f8f9fa; border-radius: 6px;">Your Company Vault ID:<br><strong id="displayNewInviteCode" style="font-size: 18px; color: #333; letter-spacing: 2px;"></strong></p>
+        <p style="font-size: 13px; color: #e74c3c; line-height: 1.5; margin-bottom: 25px; font-weight: bold;">You MUST click the secure link in your email to log in.</p>
+        <button class="btn-primary" onclick="closeVerifyEmailModal()" style="width: 100%; margin: 0; padding: 12px; font-weight: bold;">I understand</button>
+    </div>
+
     <!-- Firebase Configuration and SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>

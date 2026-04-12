@@ -73,10 +73,14 @@ if (firebaseConfig.apiKey !== "YOUR_API_KEY" && window.firebase) {
     db = firebase.firestore();
     
     auth.onAuthStateChanged(user => {
-        if (user) {
+        if (user && user.emailVerified) {
             loadUserCompanyProfile(user);
             evalOfflineBanner();
         } else {
+            if (user && !user.emailVerified) {
+                auth.signOut();
+                return;
+            }
             currentCompanyId = null;
             appSettings.isCloudReady = false;
             AppStorage.isCloudReady = false;
@@ -283,7 +287,12 @@ window.performCloudLogin = function() {
     document.getElementById('authErrorMsg').style.display = 'none';
 
     auth.signInWithEmailAndPassword(email, pwd)
-        .then(() => {
+        .then((cred) => {
+            if (!cred.user.emailVerified) {
+                auth.signOut();
+                alert("Your email address is not verified yet.\n\nPlease check your inbox and click the verification link before logging in!");
+                return;
+            }
             closeAuthModal();
             alert("Successfully logged in to Cloud Account!");
         })
@@ -330,15 +339,16 @@ window.executeCloudRegister = function() {
     let inviteCode = inviteInput || generateCompanyId();
     auth.createUserWithEmailAndPassword(email, pwd)
         .then((cred) => {
+            cred.user.sendEmailVerification();
             return db.collection("users").doc(cred.user.uid).collection("profile").doc("metadata").set({
                 companyId: inviteCode,
                 createdAt: firebase.firestore.FieldValue.serverTimestamp()
             });
         })
         .then(() => {
+            auth.signOut();
             closeAuthModal();
-            alert(`Registration successful!\n\nYour Company Vault ID (Invite Code) is: ${inviteCode}`);
-            if (auth.currentUser) loadUserCompanyProfile(auth.currentUser);
+            alert(`Registration successful!\n\nYour Company Vault ID (Invite Code) is: ${inviteCode}\n\nIMPORTANT: We have sent a verification email to ${email}. Please check your inbox and click the security link before attempting to Log In!`);
         })
         .catch(err => {
             let msg = document.getElementById('authErrorMsg');

@@ -47,7 +47,7 @@ window.evalOfflineBanner = function() {
 };
 
 function loadUserCompanyProfile(user) {
-    db.collection("users").doc(user.uid).collection("profile").doc("metadata").get().then(doc => {
+    db.collection("users").doc(user.uid).get().then(doc => {
         if (doc.exists) {
             currentCompanyId = doc.data().companyId;
             let cIDEl = document.getElementById("displayInviteCode");
@@ -340,7 +340,7 @@ window.executeCloudRegister = function() {
     auth.createUserWithEmailAndPassword(email, pwd)
         .then((cred) => {
             cred.user.sendEmailVerification();
-            return db.collection("users").doc(cred.user.uid).collection("profile").doc("metadata").set({
+            return db.collection("users").doc(cred.user.uid).set({
                 companyId: inviteCode,
                 createdAt: firebase.firestore.FieldValue.serverTimestamp()
             });

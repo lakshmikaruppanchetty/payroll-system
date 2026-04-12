@@ -50,6 +50,27 @@
     <div id="chartOverlay" class="chart-overlay" onclick="closeExpandedChart()"></div>
 
     <div class="main-content" onclick="handleGlobalClick(event)">
+        <!-- Offline Banner -->
+        <div id="offlineBanner" class="offline-banner" style="display:none;">
+            <div class="banner-content">
+                <span class="banner-icon">⚠️</span>
+                <div class="banner-text">
+                    <strong>You are currently using Local Storage (Offline Mode).</strong>
+                    <span>Your data is only saved to this device and could be lost if you clear your browser cache.</span>
+                </div>
+            </div>
+            <div class="banner-actions">
+                <button onclick="switchTab('settings')" class="btn-sync">Sign In to Cloud</button>
+                <select id="bannerRemindSelect" onchange="handleBannerRemind(this.value)" class="banner-dropdown">
+                    <option value="" disabled selected>Remind me later...</option>
+                    <option value="WEEK">In a week</option>
+                    <option value="MONTH">In a month</option>
+                    <option value="NEVER">Never</option>
+                </select>
+                <button onclick="closeOfflineBanner()" class="btn-close-banner">✕</button>
+            </div>
+        </div>
+
         <div id="payrollView" class="view-section active">
             <h2 style="text-align: center;">Payroll Management Tool</h2>
 

@@ -31,7 +31,7 @@ window.closeOfflineBanner = function() {
 };
 
 window.evalOfflineBanner = function() {
-    if (window.auth && window.auth.currentUser) {
+    if (typeof auth !== 'undefined' && auth && auth.currentUser) {
         closeOfflineBanner();
         return;
     }

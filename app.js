@@ -250,9 +250,36 @@ window.closeAuthModal = function() {
     document.getElementById('authModal').style.display = 'none';
 };
 
+window.checkAuthInputs = function() {
+    let em = document.getElementById('authEmail').value.trim();
+    let pw = document.getElementById('authPassword').value.trim();
+    let l_btn = document.getElementById('authLoginBtn');
+    let r_btn = document.getElementById('authRegisterBtn');
+    
+    if (em.length > 3 && em.includes('@') && pw.length >= 6) {
+        l_btn.disabled = false; r_btn.disabled = false;
+        l_btn.style.opacity = "1"; l_btn.style.cursor = "pointer";
+        r_btn.style.opacity = "1"; r_btn.style.cursor = "pointer";
+    } else {
+        l_btn.disabled = true; r_btn.disabled = true;
+        l_btn.style.opacity = "0.5"; l_btn.style.cursor = "not-allowed";
+        r_btn.style.opacity = "0.5"; r_btn.style.cursor = "not-allowed";
+    }
+};
+
+function mapAuthError(errCode, defaultMsg) {
+    if (errCode === 'auth/invalid-email') return "Please enter a valid email address.";
+    if (errCode === 'auth/user-not-found' || errCode === 'auth/wrong-password' || errCode === 'auth/invalid-credential') return "Incorrect email or password.";
+    if (errCode === 'auth/email-already-in-use') return "An account with this email already exists. Try Logging In.";
+    if (errCode === 'auth/weak-password') return "Password is too weak. Please use at least 6 characters.";
+    return defaultMsg || "An error occurred with authentication.";
+}
+
 window.performCloudLogin = function() {
-    let email = document.getElementById('authEmail').value;
-    let pwd = document.getElementById('authPassword').value;
+    let email = document.getElementById('authEmail').value.trim();
+    let pwd = document.getElementById('authPassword').value.trim();
+    document.getElementById('authErrorMsg').style.display = 'none';
+
     auth.signInWithEmailAndPassword(email, pwd)
         .then(() => {
             closeAuthModal();
@@ -260,7 +287,7 @@ window.performCloudLogin = function() {
         })
         .catch(err => {
             let msg = document.getElementById('authErrorMsg');
-            msg.innerText = err.message;
+            msg.innerText = mapAuthError(err.code, err.message);
             msg.style.display = 'block';
         });
 };
@@ -270,10 +297,17 @@ function generateCompanyId() {
 }
 
 window.performCloudRegister = function() {
-    let email = document.getElementById('authEmail').value;
-    let pwd = document.getElementById('authPassword').value;
-    let inviteCode = document.getElementById('authInviteCode').value.trim().toUpperCase() || generateCompanyId();
-    
+    let email = document.getElementById('authEmail').value.trim();
+    let pwd = document.getElementById('authPassword').value.trim();
+    let inviteInput = document.getElementById('authInviteCode').value.trim().toUpperCase();
+    document.getElementById('authErrorMsg').style.display = 'none';
+
+    if (!inviteInput) {
+        let conf = confirm("You left the Invite Code blank.\n\nAre you sure you want to register a BRAND NEW Workspace?\n\n(If a colleague gave you a code to join theirs, click Cancel and type it in.)");
+        if (!conf) return;
+    }
+
+    let inviteCode = inviteInput || generateCompanyId();
     auth.createUserWithEmailAndPassword(email, pwd)
         .then((cred) => {
             return db.collection("users").doc(cred.user.uid).collection("profile").doc("metadata").set({
@@ -288,7 +322,7 @@ window.performCloudRegister = function() {
         })
         .catch(err => {
             let msg = document.getElementById('authErrorMsg');
-            msg.innerText = err.message;
+            msg.innerText = mapAuthError(err.code, err.message);
             msg.style.display = 'block';
         });
 };

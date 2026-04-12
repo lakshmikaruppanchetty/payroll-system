@@ -986,6 +986,15 @@
         <button class="btn-reset" onclick="closeAuthModal()" style="width: 100%; margin-top: 15px; font-size: 12px; padding: 5px; font-weight: bold; background: transparent; color: #888; box-shadow: none;">Cancel</button>
     </div>
 
+    <div id="inviteConfirmModalOverlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); z-index:10020;"></div>
+    <div id="inviteConfirmModal" style="display:none; position:fixed; z-index:10030; background:white; padding:30px; border-radius:12px; width:350px; box-shadow:0 10px 40px rgba(0,0,0,0.5); top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center;">
+        <h3 style="margin-top:0; color: #d35400;">Wait a second!</h3>
+        <p style="font-size: 14px; color: #333; line-height: 1.5; margin-bottom: 25px;">You left the Invite Code blank. Doing this will create a <strong>BRAND NEW</strong> Company Workspace.</p>
+        <p style="font-size: 13px; color: #666; line-height: 1.5; margin-bottom: 25px;">If a colleague gave you a code to join their workspace, click the button below to type it in!</p>
+        <button class="btn-primary" onclick="cancelAndFocusInvite()" style="width: 100%; margin: 0; padding: 12px; font-weight: bold;">I have an Invite Code!</button>
+        <button class="btn-success" onclick="executeCloudRegister()" style="width: 100%; margin-top: 10px; margin-bottom: 0px; padding: 12px; font-weight: bold; background: #e74c3c;">Create a New Workspace</button>
+    </div>
+
     <!-- Firebase Configuration and SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>

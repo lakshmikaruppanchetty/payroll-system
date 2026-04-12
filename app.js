@@ -297,16 +297,34 @@ function generateCompanyId() {
 }
 
 window.performCloudRegister = function() {
-    let email = document.getElementById('authEmail').value.trim();
-    let pwd = document.getElementById('authPassword').value.trim();
     let inviteInput = document.getElementById('authInviteCode').value.trim().toUpperCase();
     document.getElementById('authErrorMsg').style.display = 'none';
 
     if (!inviteInput) {
-        let conf = confirm("You left the Invite Code blank.\n\nAre you sure you want to register a BRAND NEW Workspace?\n\n(If a colleague gave you a code to join theirs, click Cancel and type it in.)");
-        if (!conf) return;
+        document.getElementById('inviteConfirmModalOverlay').style.display = 'block';
+        document.getElementById('inviteConfirmModal').style.display = 'block';
+        return;
     }
 
+    executeCloudRegister();
+};
+
+window.cancelAndFocusInvite = function() {
+    document.getElementById('inviteConfirmModal').style.display = 'none';
+    document.getElementById('inviteConfirmModalOverlay').style.display = 'none';
+    let input = document.getElementById('authInviteCode');
+    input.focus();
+    input.style.border = "2px solid #3498db";
+    setTimeout(() => { input.style.border = "1px solid #ccc"; }, 1500);
+};
+
+window.executeCloudRegister = function() {
+    document.getElementById('inviteConfirmModal').style.display = 'none';
+    document.getElementById('inviteConfirmModalOverlay').style.display = 'none';
+    
+    let email = document.getElementById('authEmail').value.trim();
+    let pwd = document.getElementById('authPassword').value.trim();
+    let inviteInput = document.getElementById('authInviteCode').value.trim().toUpperCase();
     let inviteCode = inviteInput || generateCompanyId();
     auth.createUserWithEmailAndPassword(email, pwd)
         .then((cred) => {

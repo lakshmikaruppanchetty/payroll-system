@@ -60,7 +60,7 @@
                 </div>
             </div>
             <div class="banner-actions">
-                <button onclick="switchTab('settings')" class="btn-sync">Sign In to Cloud</button>
+                <button onclick="toggleCloudLogin(); closeOfflineBanner();" class="btn-sync">Sign In to Cloud</button>
                 <select id="bannerRemindSelect" onchange="handleBannerRemind(this.value)" class="banner-dropdown">
                     <option value="" disabled selected>Remind me later...</option>
                     <option value="WEEK">In a week</option>

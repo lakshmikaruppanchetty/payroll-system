@@ -391,7 +391,9 @@ window.renderRates = function () {
 
 window.onload = function () {
     if (typeof analytics !== "undefined") {
-        analytics.logEvent('app_open', { storage_mode: appSettings.isCloudReady ? 'cloud' : 'local' });
+        let storageMode = appSettings.isCloudReady ? 'cloud' : 'local';
+        analytics.logEvent('dashboard_loaded', { storage_mode: storageMode });
+        console.log("Firebase Analytics Event Fired: dashboard_loaded, mode:", storageMode);
     }
     renderRates();
     applySettings();

@@ -9,7 +9,7 @@ const firebaseConfig = {
     measurementId: "G-43YEQ6DTF8"
 };
 
-let firebaseApp, auth, db;
+let firebaseApp, auth, db, analytics;
 let currentCompanyId = null;
 
 window.handleBannerRemind = function(val) {
@@ -71,6 +71,7 @@ if (firebaseConfig.apiKey !== "YOUR_API_KEY" && window.firebase) {
     firebaseApp = firebase.initializeApp(firebaseConfig);
     auth = firebase.auth();
     db = firebase.firestore();
+    analytics = firebase.analytics();
     
     auth.onAuthStateChanged(user => {
         if (user && user.emailVerified) {
@@ -389,6 +390,9 @@ window.renderRates = function () {
 };
 
 window.onload = function () {
+    if (typeof analytics !== "undefined") {
+        analytics.logEvent('app_open', { storage_mode: appSettings.isCloudReady ? 'cloud' : 'local' });
+    }
     renderRates();
     applySettings();
     toggleClockFormat();

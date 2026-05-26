@@ -95,7 +95,9 @@ window.processAuditCSV = function (rawText) {
                     added: added,
                     closing: closing,
                     sales: salesArray,
-                    expenses: expenses
+                    expenses: expenses,
+                    roundSales: "",
+                    roundTips: ""
                 };
 
                 const exIdx = auditData.findIndex(ex => ex.date === date && ex.branch === branch);
@@ -168,6 +170,8 @@ window.checkExistingAudit = function () {
         document.getElementById('auditAdded').value = e.added || "0.00";
         document.getElementById('auditClosing').value = e.closing || "";
         document.getElementById('auditExpenses').value = e.expenses || "0";
+        if(document.getElementById('auditRoundSales')) document.getElementById('auditRoundSales').value = (e.roundSales === true) ? "" : (e.roundSales !== undefined && e.roundSales !== null ? e.roundSales : "");
+        if(document.getElementById('auditRoundTips')) document.getElementById('auditRoundTips').value = (e.roundTips === true) ? "" : (e.roundTips !== undefined && e.roundTips !== null ? e.roundTips : "");
 
         const container = document.getElementById('sales-container-audit');
         container.innerHTML = "";
@@ -193,6 +197,8 @@ window.checkExistingAudit = function () {
             document.getElementById('auditAdded').value = "0.00";
             document.getElementById('auditClosing').value = "";
             document.getElementById('auditExpenses').value = "0.00";
+            if(document.getElementById('auditRoundSales')) document.getElementById('auditRoundSales').value = "";
+            if(document.getElementById('auditRoundTips')) document.getElementById('auditRoundTips').value = "";
             document.getElementById('sales-container-audit').innerHTML = "";
             addInputAudit();
             editingAuditId = null;
@@ -425,8 +431,8 @@ window.editAuditEntry = function (id) {
     document.getElementById('auditAdded').value = entry.added || "0.00";
     document.getElementById('auditClosing').value = entry.closing || "";
     document.getElementById('auditExpenses').value = entry.expenses || "0";
-    if(document.getElementById('auditRoundSales')) document.getElementById('auditRoundSales').value = (entry.roundSales === true) ? "" : (entry.roundSales || "");
-    if(document.getElementById('auditRoundTips')) document.getElementById('auditRoundTips').value = (entry.roundTips === true) ? "" : (entry.roundTips || "");
+    if(document.getElementById('auditRoundSales')) document.getElementById('auditRoundSales').value = (entry.roundSales === true) ? "" : (entry.roundSales !== undefined && entry.roundSales !== null ? entry.roundSales : "");
+    if(document.getElementById('auditRoundTips')) document.getElementById('auditRoundTips').value = (entry.roundTips === true) ? "" : (entry.roundTips !== undefined && entry.roundTips !== null ? entry.roundTips : "");
 
     const cont = document.getElementById('sales-container-audit');
     cont.innerHTML = '';

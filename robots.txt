@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Allow: /index.html
+Allow: /app.html
+Allow: /sitemap.xml
+
+Sitemap: https://finance-operations-cloud.web.app/sitemap.xml

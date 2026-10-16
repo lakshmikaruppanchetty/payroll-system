@@ -863,12 +863,17 @@
                     </div>
                     <div style="flex: 1;">
                         <label>Minimum Rate (<span class="currency-label">$</span>)</label>
-                        <input type="number" id="minRateSetting" onchange="saveSettings()">
+                        <input type="number" id="minRateSetting" step="0.01" min="0" onchange="saveSettings()">
                     </div>
                     <div style="flex: 1;">
                         <label>Maximum Rate (<span class="currency-label">$</span>)</label>
-                        <input type="number" id="maxRateSetting" onchange="saveSettings()">
+                        <input type="number" id="maxRateSetting" step="0.01" min="0" onchange="saveSettings()">
                     </div>
+                </div>
+                <div style="margin-top: 15px;">
+                    <label>Custom Hourly Rates (<span class="currency-label">$</span>)<span class="tooltip-icon">i<span class="tooltip-text">Add decimal rates for cities with different minimum wages, separated by commas (e.g. 16.90, 18.25, 20.33). They are added to the Hourly Rate dropdown alongside the whole-number range.</span></span></label>
+                    <input type="text" id="customRatesSetting" onchange="saveSettings()"
+                        placeholder="e.g. 16.90, 18.25, 20.33" inputmode="decimal">
                 </div>
             </div>
 
@@ -918,7 +923,7 @@
                         onclick="startUserTour()"
                         style="margin: 0; padding: 6px 12px; font-size: 12px; border-radius: 5px;">Guided Tour</button>
                 </div>
-                <p style="line-height: 1.6; font-size: 14px; color: #444;">The Payroll Management System v20.7 is a
+                <p style="line-height: 1.6; font-size: 14px; color: #444;">ShiftTally Cloud v20.14 is a
                     client-side web application designed to track shift logs, aggregate employee performance, calculated
                     for robust business
                     operations. It computes exclusively on your local hardware securely.</p>
@@ -961,7 +966,7 @@
                         representing Gross Pay and Total Hours, completely auto-calculated with active data boundaries.
                     </li>
                 </ul>
-                <p style="text-align: center; margin-top: 35px; color: #aaa; font-size: 11px;">Version 20.13 • Built
+                <p style="text-align: center; margin-top: 35px; color: #aaa; font-size: 11px;">Version 20.14 • Built
                     with
                     HTML5 + Frontend Javascript</p>
             </div>
@@ -970,7 +975,7 @@
 
     <div style="position: fixed; bottom: 10px; left: 15px; text-align: left; font-size: 14px; font-weight: bold; color: #888; pointer-events: none; z-index: 9999;"
         id="globalFooter">
-        v20.13
+        v20.14
     </div>
 
     <!-- Guided Tour HTML -->

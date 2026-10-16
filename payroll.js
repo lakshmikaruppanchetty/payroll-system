@@ -25,7 +25,7 @@ window.duplicateSelected = function (event) {
         document.getElementById("s3start").value = e.s3s; document.getElementById("s3end").value = e.s3e;
         if (document.getElementById("s4start")) { document.getElementById("s4start").value = e.s4s || ""; document.getElementById("s4end").value = e.s4e || ""; }
         if (document.getElementById("s5start")) { document.getElementById("s5start").value = e.s5s || ""; document.getElementById("s5end").value = e.s5e || ""; }
-        document.getElementById("hourlyRate").value = e.rate;
+        setRateValue(document.getElementById("hourlyRate"), e.rate);
         window.scrollTo(0, 0); selectedId = null; document.getElementById("floatingDupBtn").style.display = "none"; renderAll();
         window.isDuplicating = true;
     }
@@ -592,7 +592,7 @@ window.renderAll = function () {
 
         const d = e.date.split('-').slice(1).concat(e.date.split('-')[0]).join('-');
         const brCell = appSettings.showBranch ? `<td>${e.branch}</td>` : '<td style="display:none"></td>';
-        dailyBody.innerHTML += `<tr ${selectedId === e.id ? 'class="selected"' : ''} onclick="selectRow(${e.id}, event)"><td>${d}</td>${brCell}<td>${sHT(e.s1s, e.s1e)}</td><td>${sHT(e.s2s, e.s2e)}</td><td style="display:${hasS3 ? '' : 'none'}">${sHT(e.s3s, e.s3e)}</td><td style="display:${hasS4 ? '' : 'none'}">${sHT(e.s4s, e.s4e)}</td><td style="display:${hasS5 ? '' : 'none'}">${sHT(e.s5s, e.s5e)}</td><td>${decToT(e.total)}</td><td>${getCurrencySymbol()}${e.rate}</td><td>${getCurrencySymbol()}${e.pay}</td><td><button class="btn-edit-small" onclick="event.stopPropagation(); editEntry(${e.id})">Edit</button><button class="btn-danger-x" onclick="event.stopPropagation(); deleteEntry(${e.id})">×</button></td></tr>`;
+        dailyBody.innerHTML += `<tr ${selectedId === e.id ? 'class="selected"' : ''} onclick="selectRow(${e.id}, event)"><td>${d}</td>${brCell}<td>${sHT(e.s1s, e.s1e)}</td><td>${sHT(e.s2s, e.s2e)}</td><td style="display:${hasS3 ? '' : 'none'}">${sHT(e.s3s, e.s3e)}</td><td style="display:${hasS4 ? '' : 'none'}">${sHT(e.s4s, e.s4e)}</td><td style="display:${hasS5 ? '' : 'none'}">${sHT(e.s5s, e.s5e)}</td><td>${decToT(e.total)}</td><td>${getCurrencySymbol()}${Number(e.rate).toFixed(2)}</td><td>${getCurrencySymbol()}${e.pay}</td><td><button class="btn-edit-small" onclick="event.stopPropagation(); editEntry(${e.id})">Edit</button><button class="btn-danger-x" onclick="event.stopPropagation(); deleteEntry(${e.id})">×</button></td></tr>`;
     });
     const filteredEmps = [...new Set(display.map(e => e.name))];
     filteredEmps.sort((a, b) => summarySortAsc ? a.localeCompare(b) : b.localeCompare(a));
@@ -780,7 +780,7 @@ window.checkExistingShifts = function () {
             if (!confirm(`An existing record for ${name} on ${date} was found. Would you like to load and overwrite your current form data?`)) return;
         }
         document.getElementById("s1start").value = e.s1s; document.getElementById("s1end").value = e.s1e; document.getElementById("s2start").value = e.s2s; document.getElementById("s2end").value = e.s2e; document.getElementById("s3start").value = e.s3s; document.getElementById("s3end").value = e.s3e;
-        document.getElementById("hourlyRate").value = e.rate; document.getElementById("branchName").value = e.branch;
+        setRateValue(document.getElementById("hourlyRate"), e.rate); document.getElementById("branchName").value = e.branch;
         editingId = e.id; document.getElementById("mainBtn").innerText = "Update Log";
         window.isDuplicating = false;
 
@@ -1217,7 +1217,7 @@ window.exportToPDF = function () {
         d.branch,
         window.formatShiftString(d, '\n'),
         decToT(d.total),
-        `${getCurrencySymbol()}${d.rate}`,
+        `${getCurrencySymbol()}${Number(d.rate).toFixed(2)}`,
         `${getCurrencySymbol()}${d.pay}`
     ]);
 
@@ -1262,7 +1262,7 @@ window.exportToPDF = function () {
 
     doc.save('payroll_report.pdf');
 };
-window.editEntry = function (id) { const e = masterData.find(x => x.id === id); if (!e) return; editingId = id; document.getElementById("empName").value = e.name; document.getElementById("branchName").value = e.branch; document.getElementById("workDate").value = e.date; document.getElementById("s1start").value = e.s1s; document.getElementById("s1end").value = e.s1e; document.getElementById("s2start").value = e.s2s; document.getElementById("s2end").value = e.s2e; document.getElementById("s3start").value = e.s3s; document.getElementById("s3end").value = e.s3e; document.getElementById("hourlyRate").value = e.rate; document.getElementById("mainBtn").innerText = "Update Log"; window.scrollTo(0, 0); };
+window.editEntry = function (id) { const e = masterData.find(x => x.id === id); if (!e) return; editingId = id; document.getElementById("empName").value = e.name; document.getElementById("branchName").value = e.branch; document.getElementById("workDate").value = e.date; document.getElementById("s1start").value = e.s1s; document.getElementById("s1end").value = e.s1e; document.getElementById("s2start").value = e.s2s; document.getElementById("s2end").value = e.s2e; document.getElementById("s3start").value = e.s3s; document.getElementById("s3end").value = e.s3e; setRateValue(document.getElementById("hourlyRate"), e.rate); document.getElementById("mainBtn").innerText = "Update Log"; window.scrollTo(0, 0); };
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
@@ -1563,7 +1563,7 @@ window.generatePayStub = function (employeeName) {
         window.formatDisplayDate(d.date),
         window.formatShiftString(d, ', '),
         decToT(d.total),
-        `${getCurrencySymbol()}${d.rate}`,
+        `${getCurrencySymbol()}${Number(d.rate).toFixed(2)}`,
         `${getCurrencySymbol()}${d.pay}`
     ]);
 

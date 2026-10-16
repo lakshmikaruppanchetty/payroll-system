@@ -175,6 +175,7 @@ appSettings.showExtendedShifts = appSettings.showExtendedShifts ?? false;
 appSettings.companyLogo = appSettings.companyLogo ?? null;
 appSettings.minRate = appSettings.minRate ?? 15;
 appSettings.maxRate = appSettings.maxRate ?? 35;
+appSettings.customRates = appSettings.customRates ?? "";
 appSettings.ocrEngine = appSettings.ocrEngine ?? 'free';
 appSettings.llmApiKey = appSettings.llmApiKey ?? '';
 appSettings.geminiApiKey = appSettings.geminiApiKey ?? '';
@@ -372,21 +373,56 @@ window.renderRates = function () {
     const cBR = bulkRateSelect.value;
     rateSelect.innerHTML = ""; bulkRateSelect.innerHTML = "";
 
-    let minR = parseInt(appSettings.minRate, 10);
-    let maxR = parseInt(appSettings.maxRate, 10);
+    let minR = parseFloat(appSettings.minRate);
+    let maxR = parseFloat(appSettings.maxRate);
     if (isNaN(minR)) minR = 15;
     if (isNaN(maxR)) maxR = 35;
     if (minR > maxR) maxR = minR;
 
-    for (let i = minR; i <= maxR; i++) {
-        let opt1 = document.createElement("option"); opt1.value = i; opt1.text = getCurrencySymbol() + i;
-        let opt2 = document.createElement("option"); opt2.value = i; opt2.text = getCurrencySymbol() + i;
-        if (i === 17) { opt1.selected = true; opt2.selected = true; }
-        rateSelect.appendChild(opt1); bulkRateSelect.appendChild(opt2);
-    }
+    // Whole-number steps between min and max, plus both (possibly decimal) bounds
+    const rates = new Set([minR, maxR]);
+    for (let i = Math.ceil(minR); i <= maxR; i++) rates.add(i);
+    // City-specific decimal rates, e.g. "16.90, 18.25"
+    parseCustomRates(appSettings.customRates).forEach(r => rates.add(r));
 
-    if (cR && cR >= minR && cR <= maxR) rateSelect.value = cR;
-    if (cBR && cBR >= minR && cBR <= maxR) bulkRateSelect.value = cBR;
+    const sorted = [...rates].map(r => Math.round(r * 100) / 100).sort((a, b) => a - b);
+    [...new Set(sorted)].forEach(r => {
+        rateSelect.appendChild(makeRateOption(r));
+        bulkRateSelect.appendChild(makeRateOption(r));
+    });
+
+    const defaultRate = sorted.includes(17) ? 17 : sorted[0];
+    setRateValue(rateSelect, cR !== "" ? cR : defaultRate);
+    setRateValue(bulkRateSelect, cBR !== "" ? cBR : defaultRate);
+};
+
+function parseCustomRates(str) {
+    return String(str || "").split(/[,\s]+/).map(parseFloat).filter(r => !isNaN(r) && r > 0);
+}
+
+function formatRate(r) {
+    const n = Number(r);
+    return Number.isInteger(n) ? String(n) : n.toFixed(2);
+}
+
+function makeRateOption(r) {
+    const opt = document.createElement("option");
+    opt.value = String(Number(r));
+    opt.text = getCurrencySymbol() + formatRate(r);
+    return opt;
+}
+
+// Selects a rate in a dropdown, adding it if it isn't already listed
+// (e.g. editing an older record whose rate is outside the configured range).
+window.setRateValue = function (selectEl, rate) {
+    if (!selectEl || rate === undefined || rate === null || rate === "" || isNaN(Number(rate))) return;
+    const val = String(Number(rate));
+    if (![...selectEl.options].some(o => o.value === val)) {
+        const opt = makeRateOption(rate);
+        const after = [...selectEl.options].find(o => Number(o.value) > Number(rate));
+        selectEl.insertBefore(opt, after || null);
+    }
+    selectEl.value = val;
 };
 
 window.onload = function () {
@@ -467,8 +503,9 @@ function saveSettings() {
     appSettings.llmApiKey = document.getElementById("llmApiKey").value;
     appSettings.geminiApiKey = document.getElementById("geminiApiKey").value;
     appSettings.securityPin = document.getElementById("securityPinSetting").value || '1234';
-    appSettings.minRate = parseInt(document.getElementById("minRateSetting").value, 10) || 15;
-    appSettings.maxRate = parseInt(document.getElementById("maxRateSetting").value, 10) || 35;
+    appSettings.minRate = parseFloat(document.getElementById("minRateSetting").value) || 15;
+    appSettings.maxRate = parseFloat(document.getElementById("maxRateSetting").value) || 35;
+    appSettings.customRates = parseCustomRates(document.getElementById("customRatesSetting").value).map(formatRate).join(", ");
     AppStorage.setItem("settings_v20", JSON.stringify(appSettings));
     applySettings();
     renderRates();
@@ -618,6 +655,7 @@ function applySettings() {
     document.getElementById("securityPinSetting").value = appSettings.securityPin;
     document.getElementById("minRateSetting").value = appSettings.minRate;
     document.getElementById("maxRateSetting").value = appSettings.maxRate;
+    document.getElementById("customRatesSetting").value = appSettings.customRates || "";
 
     const logoContainer = document.getElementById("logoContainer");
     const logoImg = document.getElementById("sidebarLogo");

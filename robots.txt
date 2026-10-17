@@ -4,4 +4,4 @@ Allow: /index.html
 Allow: /app.html
 Allow: /sitemap.xml
 
-Sitemap: https://finance-operations-cloud.web.app/sitemap.xml
+Sitemap: https://shiftnook.web.app/sitemap.xml

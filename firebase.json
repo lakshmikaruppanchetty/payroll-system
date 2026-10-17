@@ -1,24 +1,48 @@
 {
-  "hosting": {
-    "public": ".",
-    "ignore": [
-      "firebase.json",
-      "**/.*",
-      "**/.*/**",
-      ".git/**",
-      "**/node_modules/**",
-      "tests/**",
-      "tmp/**",
-      "test_*",
-      "debug_*",
-      "*.py",
-      "*.csv",
-      "*.md",
-      "*.sh",
-      "LICENSE",
-      "firestore.rules"
-    ]
-  },
+  "hosting": [
+    {
+      "site": "finance-operations-cloud",
+      "public": ".",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/.*/**",
+        ".git/**",
+        "**/node_modules/**",
+        "tests/**",
+        "tmp/**",
+        "test_*",
+        "debug_*",
+        "*.py",
+        "*.csv",
+        "*.md",
+        "*.sh",
+        "LICENSE",
+        "firestore.rules"
+      ]
+    },
+    {
+      "site": "shiftnook",
+      "public": ".",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/.*/**",
+        ".git/**",
+        "**/node_modules/**",
+        "tests/**",
+        "tmp/**",
+        "test_*",
+        "debug_*",
+        "*.py",
+        "*.csv",
+        "*.md",
+        "*.sh",
+        "LICENSE",
+        "firestore.rules"
+      ]
+    }
+  ],
   "firestore": {
     "rules": "firestore.rules"
   }
